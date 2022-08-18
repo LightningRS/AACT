@@ -1,0 +1,217 @@
+package com.iscas.aact.utils;
+
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
+@Slf4j
+public class ADBInterface {
+    private static class ADBResult {
+        private String out;
+        private String err;
+
+        @Override
+        public String toString() {
+            return String.format("stdout:\n%s\nstderr:\n%s", out, err);
+        }
+    }
+
+    private static class ADBInterfaceHolder {
+        private static final ADBInterface INSTANCE = new ADBInterface();
+    }
+
+    private Path adbExecPath;
+    private String deviceSerial;
+    private boolean isConnected = false;
+
+    private ADBInterface() {
+
+    }
+
+    public static ADBInterface getInstance() {
+        return ADBInterfaceHolder.INSTANCE;
+    }
+
+    private Process callADB(String[] args) {
+        List<String> cmd = new ArrayList<>();
+        cmd.add(this.adbExecPath.toString());
+        if (this.deviceSerial != null
+                && !args[0].equals("devices")
+                && !args[0].equals("start-server")
+                && !args[0].equals("kill-server")
+        ) {
+            cmd.add("-s");
+            cmd.add(this.deviceSerial);
+        }
+        cmd.addAll(List.of(args));
+        log.debug("Executing adb command: {}", cmd);
+        try {
+            return Runtime.getRuntime().exec(cmd.toArray(new String[0]));
+        } catch (IOException e) {
+            log.error("IOException when calling adb", e);
+        }
+        return null;
+    }
+
+    private Process callADBAsync(String... args) {
+        return this.callADB(args);
+    }
+
+    private ADBResult callADBSync(String... args) {
+        Process p = this.callADB(args);
+        if (p == null) return null;
+        StringBuilder stdoutBuffer = new StringBuilder();
+        StringBuilder stderrBuffer = new StringBuilder();
+        try {
+            BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+
+            int b;
+            while ((b = stdout.read()) != -1) {
+                stdoutBuffer.append((char) b);
+            }
+            while ((b = stderr.read()) != -1) {
+                stderrBuffer.append((char) b);
+            }
+        } catch (IOException e) {
+            log.error("IOException when reading adb result", e);
+        }
+        ADBResult result = new ADBResult();
+        result.out = stdoutBuffer.length() > 0 ? stdoutBuffer.toString().trim() : null;
+        result.err = stderrBuffer.length() > 0 ? stderrBuffer.toString().trim() : null;
+        // log.debug("ADB result\n=== adb result start\n{}\n=== adb result end", result);
+        return result;
+    }
+
+    public void setADBExecPath(String path) {
+        Path execPath = Paths.get(path).toAbsolutePath();
+        if (Files.notExists(execPath)) {
+            log.error(String.format("ADB executable path [%s] not found", execPath.toString()));
+            throw new RuntimeException("ADB executable not found");
+        }
+        this.adbExecPath = execPath;
+    }
+
+    public Path getADBExecPath() {
+        return this.adbExecPath;
+    }
+
+    public String getADBExecPathStr() {
+        return this.adbExecPath == null ? null : this.adbExecPath.toString();
+    }
+
+    public boolean isConnected() {
+        return this.isConnected;
+    }
+
+    public void disconnect() {
+        this.isConnected = false;
+    }
+
+    public boolean connect(String deviceSerial) {
+        this.deviceSerial = deviceSerial;
+        return this.connect();
+    }
+
+    public boolean connect() {
+        if (this.adbExecPath == null) {
+            log.error("ADB executable path is not specified");
+            return false;
+        }
+        ADBResult res = this.callADBSync("devices");
+        if (res == null) {
+            log.error("adb devices returned error! res:\n{}", res);
+            return false;
+        }
+        res = this.callADBSync("get-state");
+        if (res == null || res.out == null || !res.out.equals("device")) {
+            log.error("adb get-state returned error! res:\n{}", res);
+            return false;
+        }
+        log.info("adb connected to device{}", this.deviceSerial != null ? " [" + this.deviceSerial + "]" : "");
+        this.isConnected = true;
+        return true;
+    }
+
+    public String shellSync(String... command) {
+        String[] shellCommand = Stream.concat(Arrays.stream(new String[]{"shell"}), Arrays.stream(command)).toArray(String[]::new);
+        ADBResult res = this.callADBSync(shellCommand);
+        if (res == null || res.err != null) {
+            log.error("Failed to call adb shell, res={}", res);
+            return null;
+        }
+        return res.out;
+    }
+
+    public Integer forward(Integer remotePort) {
+        return this.forward("tcp:0", "tcp:" + remotePort);
+    }
+
+    public Integer forward(Integer localPort, Integer remotePort) {
+        return this.forward("tcp:" + localPort, "tcp:" + remotePort);
+    }
+
+    private Integer forward(String local, String remote) {
+        String localParam = local.startsWith("tcp:") ? local : "tcp:" + local;
+        String remoteParam = remote.startsWith("tcp:") ? remote : "tcp:" + remote;
+        ADBResult res = this.callADBSync("forward", localParam, remoteParam);
+        if (res == null || res.err != null) {
+            log.error("Failed to call adb forward, res={}", res);
+            return null;
+        }
+        if (res.out == null) {
+            // The local port forwarding is already exists
+            log.error("Local address [{}] is already used for forwarding", localParam);
+            return null;
+        }
+        String[] splitRes = res.out.split(":");
+        return Integer.parseInt(splitRes[splitRes.length - 1]);
+    }
+
+    public boolean removeForward(Integer localPort) {
+        return this.removeForward("tcp:" + localPort);
+    }
+
+    private boolean removeForward(String local) {
+        String localParam = local.startsWith("tcp:") ? local : "tcp:" + local;
+        ADBResult res = this.callADBSync("forward", "--remove", localParam);
+        if (res == null || res.err != null) {
+            log.warn("Failed to call adb forward --remove, res={}", res);
+            return false;
+        }
+        if (res.out == null) {
+            log.info("Removed port forwarding on [{}]", localParam);
+            return true;
+        }
+        log.warn("Failed to remove port forwarding on [{}], res={}", localParam, res);
+        return false;
+    }
+
+    public Process getLogcatProcess() {
+        return this.getLogcatProcess("year");
+    }
+
+    public Process getLogcatProcess(String verbosity) {
+        this.callADBSync("logcat", "-c");
+        return this.callADBAsync("logcat", "-v", verbosity);
+    }
+
+    public boolean pushSync(String localPath, String remotePath) {
+        String[] pushCommand = Arrays.asList("push", localPath, remotePath).toArray(String[]::new);
+        ADBResult res = this.callADBSync(pushCommand);
+        if (res == null || res.err != null) {
+            log.error("Failed to call adb push, res={}", res);
+            return false;
+        }
+        return res.out.contains("pushed,");
+    }
+}

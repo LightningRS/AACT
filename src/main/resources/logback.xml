@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false" scan="true" scanPeriod="60 seconds">
+    <statusListener class="ch.qos.logback.core.status.NopStatusListener"/>
+    <appender name="CONSOLE-LOG" class="ch.qos.logback.core.ConsoleAppender">
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>logger.contains("LogcatMonitor")</expression>
+            </evaluator>
+            <OnMatch>DENY</OnMatch>
+            <OnMismatch>NEUTRAL</OnMismatch>
+        </filter>
+        <encoder>
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %thread %level %logger{36} [%file:%line] - %msg%n</pattern>
+        </encoder>
+    </appender>
+    <!-- 时间滚动输出 level为 DEBUG ⽇志 -->
+    <appender name="FILE-LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <filter class="ch.qos.logback.core.filter.EvaluatorFilter">
+            <evaluator>
+                <expression>logger.contains("LogcatMonitor")</expression>
+            </evaluator>
+            <OnMatch>DENY</OnMatch>
+            <OnMismatch>NEUTRAL</OnMismatch>
+        </filter>
+        <!-- 正在记录的⽇志⽂件的路径及⽂件名 -->
+        <file>logs/test-controller.log</file>
+        <!--⽇志⽂件输出格式-->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>-->
+            <pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %thread %level %logger{36} [%file:%line] - %msg%n</pattern>
+            <charset>UTF-8</charset> <!-- 设置字符集 -->
+        </encoder>
+        <!-- ⽇志记录器的滚动策略，按⽇期，按⼤⼩记录 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- ⽇志归档 -->
+            <fileNamePattern>logs/console-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!--⽇志⽂件保留天数-->
+            <!--<maxHistory>15</maxHistory>-->
+        </rollingPolicy>
+    </appender>
+    <!-- 时间滚动输出 level为 DEBUG ⽇志 -->
+    <appender name="LOGCAT-LOG" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <!-- 正在记录的⽇志⽂件的路径及⽂件名 -->
+        <file>logs/logcat.log</file>
+        <!--⽇志⽂件输出格式-->
+        <encoder>
+            <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>-->
+            <pattern>%msg%n</pattern>
+            <charset>UTF-8</charset> <!-- 设置字符集 -->
+        </encoder>
+        <!-- ⽇志记录器的滚动策略，按⽇期，按⼤⼩记录 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- ⽇志归档 -->
+            <fileNamePattern>logs/logcat-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
+                <maxFileSize>100MB</maxFileSize>
+            </timeBasedFileNamingAndTriggeringPolicy>
+            <!--⽇志⽂件保留天数-->
+            <!--<maxHistory>15</maxHistory>-->
+        </rollingPolicy>
+    </appender>
+    <logger name="org.reflections.Reflections" level="WARN"/>
+    <logger name="ch.qos.logback.*" level="WARN"/>
+    <logger name="com.iscas.aact.logcat.LogcatMonitor" level="DEBUG">
+        <appender-ref ref="LOGCAT-LOG"/>
+    </logger>
+    <root level="DEBUG">
+        <appender-ref ref="CONSOLE-LOG"/>
+        <appender-ref ref="FILE-LOG"/>
+    </root>
+</configuration>
