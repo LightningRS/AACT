@@ -39,5 +39,6 @@ replay_pid*
 logs/
 out/
 target/
+utils/
 dependency-reduced-pom.xml
 src/main/java/Test.java
