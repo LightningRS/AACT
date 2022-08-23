@@ -36,9 +36,9 @@ replay_pid*
 .idea/
 
 # custom
-logs/
-out/
-target/
-utils/
+/logs/
+/out/
+/target/
+/utils/
 dependency-reduced-pom.xml
-src/main/java/Test.java
+/src/main/java/Test.java

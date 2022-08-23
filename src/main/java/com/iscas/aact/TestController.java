@@ -77,8 +77,8 @@ public class TestController {
             this.logcatMonitor.start();
 
             // Restart test bridge
-            adb.shellSync("am", "force-stop", Constants.CLIENT_PKG_NAME);
-            adb.shellSync("am", "start", Constants.CLIENT_PKG_NAME + "/" + Constants.CLIENT_ACT_NAME);
+            adb.forceStopApp(Constants.CLIENT_PKG_NAME);
+            adb.startActivity(Constants.CLIENT_PKG_NAME, Constants.CLIENT_ACT_NAME);
 
             // Wait until RPCController ready
             while (rpcController == null || !rpcController.isReady()) {
@@ -105,9 +105,27 @@ public class TestController {
         while (currApkIndex < apksPath.size()) {
             int apkUniqueCrashesCnt = 0;
             log.info("Processing APK [{}] ({}/{})", apksPath.get(currApkIndex), currApkIndex + 1, apksPath.size());
-            if (!loadApk(apksPath.get(currApkIndex))) {
-                log.error("Failed to load APK #{}: {}, skipped", currApkIndex + 1, apksPath.get(currApkIndex));
+            Path apkPath = apksPath.get(currApkIndex);
+            if (!loadApk(apkPath)) {
+                log.error("Failed to load APK #{}: {}, skipped", currApkIndex + 1, apkPath);
                 continue;
+            }
+
+            // Check whether the APK is installed
+            if (!adb.isPackageInstalled(currApkMeta.getPackageName())) {
+                log.error("APK [{}] ({}) is not installed! Installing...", currApkMeta.getPackageName(), apkPath);
+                if (!adb.installSync(apkPath.toString())) {
+                    log.error("Failed to install apk [{}] ({})! Skip test", currApkMeta.getPackageName(), apkPath);
+
+                    // Reset recovery parameters
+                    GlobalConfig.setStartStrategy(null);
+                    currCaseIndex = 0;
+                    currCompIndex = 0;
+                    currApkIndex++;
+
+                    // Continue for next apk
+                    continue;
+                }
             }
             while (currCompIndex < currAppModel.getCompCount()) {
                 // Stack trace body -> Failed Message
@@ -261,7 +279,12 @@ public class TestController {
 
                     // Run testcases
                     while (currCaseIndex < currCaseCount) {
-                        adb.shellSync("am", "force-stop", currAppModel.getPackageName());
+                        String recoveryInfo = String.format(
+                                "compName=%s, apkIndex=%s, compIndex=%s, caseIndex=%s, strategy=%s",
+                                currCompModel.getClassName(), currApkIndex, currCompIndex, currCaseIndex, strategy
+                        );
+
+                        adb.forceStopApp(currAppModel.getPackageName());
                         log.info("Start to run testcase #{}/{}", currCaseIndex + 1, currCaseCount);
                         // Waiting for testcase run finished
                         setCurrCompState(STATE_RUNNING_TESTCASE);
@@ -299,11 +322,9 @@ public class TestController {
                         }
 
                         if (compStateMonitor.getCompState() <= CompStateMonitor.STATE_CLIENT_ERROR) {
-                            log.error("Case running ERROR! Try to rollback! state={}, mFocusedActivity={}, comp={}, " +
-                                            "apkIndex={}, compIndex={}, caseIndex={}, strategy={}",
+                            log.error("Case running ERROR! Try to rollback! state={}, mFocusedActivity={}, {}",
                                     compStateMonitor.getCompStateName(), compStateMonitor.getFocusedActivity(),
-                                    currCompModel.getClassName(), currApkIndex, currCompIndex, currCaseIndex,
-                                    strategy);
+                                    recoveryInfo);
                             continue;
                         }
 
@@ -323,32 +344,28 @@ public class TestController {
                         }
 
                         if (compStateMonitor.getCompState() < CompStateMonitor.STATE_JUMPED) {
-                            log.error("Case FAILED! state={}, mFocusedActivity={}, comp={}, apkIndex={}, compIndex={}, caseIndex={}, strategy={}",
+                            log.error("Case FAILED! state={}, mFocusedActivity={}, {}",
                                     compStateMonitor.getCompStateName(), compStateMonitor.getFocusedActivity(),
-                                    currCompModel.getClassName(), currApkIndex, currCompIndex, currCaseIndex,
-                                    strategy);
+                                    recoveryInfo);
 
                             if (compStateMonitor.getCompState() >= CompStateMonitor.STATE_APP_CRASHED) {
-                                if (mergedTraceBlock.headInfo != null && !uniqueStackTraces.containsKey(mergedTraceBlock.body)) {
+                                if (mergedTraceBlock.headInfo != null &&
+                                        !uniqueStackTraces.containsKey(mergedTraceBlock.body)) {
                                     String resultMsg = String.format(
-                                            "state=%s, apkIndex=%s, compIndex=%s, caseIndex=%s, strategy=%s, compName=%s",
-                                            compStateMonitor.getCompStateName(), currApkIndex, currCompIndex, currCaseIndex,
-                                            strategy, currCompModel.getClassName());
+                                            "state=%s, %s", compStateMonitor.getCompStateName(), recoveryInfo
+                                    );
                                     uniqueStackTraces.put(mergedTraceBlock.body, resultMsg);
                                     log.info("Unique crash #{} detected! " + resultMsg, uniqueStackTraces.size());
                                 }
                                 if (!GlobalConfig.getContinueIfError()) return;
                             }
                         } else if (compStateMonitor.getCompState().equals(CompStateMonitor.STATE_JUMPED)) {
-                            log.info("Case JUMPED! mFocusedActivity={}, comp={}, apkIndex={}, compIndex={}, caseIndex={}, strategy={}",
-                                    compStateMonitor.getFocusedActivity(),
-                                    currCompModel.getClassName(), currApkIndex, currCompIndex, currCaseIndex,
-                                    strategy);
+                            log.info("Case JUMPED! mFocusedActivity={}, {}",
+                                    compStateMonitor.getFocusedActivity(), recoveryInfo);
                         } else {
-                            log.info("Case PASSED! state={}, mFocusedActivity={}, comp={}, apkIndex={}, compIndex={}, caseIndex={}, strategy={}",
+                            log.info("Case PASSED! state={}, mFocusedActivity={}, {}",
                                     compStateMonitor.getCompStateName(), compStateMonitor.getFocusedActivity(),
-                                    currCompModel.getClassName(), currApkIndex, currCompIndex, currCaseIndex,
-                                    strategy);
+                                    recoveryInfo);
                         }
                         // Testcase finished
                         log.info("Finished running testcase #{}", currCaseIndex + 1);
@@ -356,14 +373,14 @@ public class TestController {
                     }
                     currCaseIndex = 0;
                 }
-                adb.shellSync("am", "force-stop", currAppModel.getPackageName());
+                adb.forceStopApp(currAppModel.getPackageName());
                 log.info("Finished testing component [{}], with {} unique crashes",
                         currCompModel.getClassName(), uniqueStackTraces.size());
                 apkUniqueCrashesCnt += uniqueStackTraces.size();
                 currCompIndex++;
             }
             if (!GlobalConfig.getTestGenMode().equals(TestGenMode.ONLY)) {
-                adb.shellSync("am", "force-stop", currAppModel.getPackageName());
+                adb.forceStopApp(currAppModel.getPackageName());
                 log.info("Finished testing APK [{}], with {} unique crashes", apksPath.get(currApkIndex), apkUniqueCrashesCnt);
             } else {
                 log.info("Finished generating testcases for APK [{}]", apksPath.get(currApkIndex));

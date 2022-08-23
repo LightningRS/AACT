@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,5 +59,21 @@ class ADBInterfaceTest {
         Integer failPort = adb.forward(localPort, 1235);
         assertNull(failPort);
         assertTrue(adb.removeForward(localPort));
+    }
+
+    @org.junit.jupiter.api.Test
+    void testInstallAndUninstall() {
+        String fakeApkPath = "/fake/apk/path.apk";
+        String realApkPath = Objects.requireNonNull(this.getClass().getResource("/apkgolf-minimal.apk")).getPath();
+        realApkPath = realApkPath.substring(1);
+        ADBInterface adb = ADBInterface.getInstance();
+        assertTrue(this.connectIfNot());
+        assertFalse(adb.installSync(fakeApkPath));
+        assertTrue(adb.uninstallSync("c.c"));
+        assertFalse(adb.isPackageInstalled("c.c"));
+        assertTrue(adb.installSync(realApkPath));
+        assertTrue(adb.installSync(realApkPath));
+        assertTrue(adb.isPackageInstalled("c.c"));
+        assertTrue(adb.uninstallSync("c.c"));
     }
 }

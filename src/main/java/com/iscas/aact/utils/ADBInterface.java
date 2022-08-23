@@ -11,7 +11,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Stream;
 
 @Slf4j
 public class ADBInterface {
@@ -148,11 +147,15 @@ public class ADBInterface {
         return true;
     }
 
-    public String shellSync(String... command) {
-        String[] shellCommand = Stream.concat(Arrays.stream(new String[]{"shell"}), Arrays.stream(command)).toArray(String[]::new);
+    public String shellSync(String command) {
+        String[] shellCommand = Arrays.asList("shell", command).toArray(String[]::new);
         ADBResult res = this.callADBSync(shellCommand);
-        if (res == null || res.err != null) {
-            log.error("Failed to call adb shell, res={}", res);
+        if (res == null) {
+            log.error("Failed to call adb shell: no result");
+            return null;
+        } else if (res.err != null) {
+            log.error("Failed to call adb shell: error");
+            log.error(res.toString());
             return null;
         }
         return res.out;
@@ -222,6 +225,18 @@ public class ADBInterface {
     }
 
     /**
+     * Check whether a package is installed or not.
+     *
+     * @param packageId Package ID
+     * @return true if installed, false otherwise
+     */
+    public boolean isPackageInstalled(String packageId) {
+        String command = "pm list packages | grep \"" + packageId + "\"";
+        String res = this.shellSync(command);
+        return res != null && !"".equals(res.trim());
+    }
+
+    /**
      * Install APK sync
      *
      * @param apkPath Path to apk file
@@ -256,5 +271,27 @@ public class ADBInterface {
         log.error("Failed to uninstall package [{}]: error", packageId);
         log.error(res.toString());
         return false;
+    }
+
+    /**
+     * Force stop an application (using <b>am force-stop</b>).
+     *
+     * @param pkgId App Package ID
+     */
+    public void forceStopApp(String pkgId) {
+        String command = "am force-stop \"" + pkgId + "\"";
+        this.shellSync(command);
+    }
+
+
+    /**
+     * Force stop an application (using <b>am start</b>).
+     *
+     * @param pkgId App Package ID
+     */
+    public boolean startActivity(String pkgId, String actId) {
+        String command = "am start \"" + pkgId + "/" + actId + "\"";
+        String res = this.shellSync(command);
+        return res != null && !res.contains("Error:");
     }
 }

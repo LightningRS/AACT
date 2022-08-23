@@ -116,7 +116,7 @@ public class CompStateMonitor {
             log.debug("Unsupported component type: " + this.compType);
             return;
         }
-        String res = adb.shellSync("dumpsys", dumpSysType);
+        String res = adb.shellSync("dumpsys " + dumpSysType);
         if (res == null) {
             log.warn("Call dumpsys failed");
             return;

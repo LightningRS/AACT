@@ -186,8 +186,8 @@ public class RPCController {
                 Log.error("InterruptedException when reconnecting", e);
             }
             // Restart test bridge
-            adb.shellSync("am", "force-stop", Constants.CLIENT_PKG_NAME);
-            adb.shellSync("am", "start", Constants.CLIENT_PKG_NAME + "/" + Constants.CLIENT_ACT_NAME);
+            adb.forceStopApp(Constants.CLIENT_PKG_NAME);
+            adb.startActivity(Constants.CLIENT_PKG_NAME, Constants.CLIENT_ACT_NAME);
 
             if (mLoadCaseCommand != null) {
                 while (!mIsReady) Thread.yield();
