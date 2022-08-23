@@ -21,7 +21,13 @@ public class ADBInterface {
 
         @Override
         public String toString() {
-            return String.format("stdout:\n%s\nstderr:\n%s", out, err);
+            return String.format("""
+                    ADBResult dump
+                    ======== STDOUT ========
+                    %s
+                    ======== STDERR ========
+                    %s
+                    ========================""", out, err);
         }
     }
 
@@ -213,5 +219,42 @@ public class ADBInterface {
             return false;
         }
         return res.out.contains("pushed,");
+    }
+
+    /**
+     * Install APK sync
+     *
+     * @param apkPath Path to apk file
+     * @return true if installed, false otherwise
+     */
+    public boolean installSync(String apkPath) {
+        String[] command = Arrays.asList("install", "-g", apkPath).toArray(String[]::new);
+        ADBResult res = this.callADBSync(command);
+        if (res == null) return false;
+        if (res.out != null && res.out.contains("Success")) return true;
+        if (res.err != null && res.err.contains("INSTALL_FAILED_ALREADY_EXISTS")) return true;
+        log.error("Failed to install APK [{}]", apkPath);
+        log.error(res.toString());
+        return false;
+    }
+
+    /**
+     * Uninstall package sync
+     *
+     * @param packageId Package ID
+     * @return true if uninstalled, false otherwise
+     */
+    public boolean uninstallSync(String packageId) {
+        String[] shellCommand = Arrays.asList("shell", "pm uninstall \"" + packageId + "\"").toArray(String[]::new);
+        ADBResult res = this.callADBSync(shellCommand);
+        if (res == null) {
+            log.error("Failed to uninstall package [{}]: no result", packageId);
+            return false;
+        }
+        if (res.out != null && res.out.contains("Success")) return true;
+        if (res.err != null && res.err.contains("Unknown package")) return true;
+        log.error("Failed to uninstall package [{}]: error", packageId);
+        log.error(res.toString());
+        return false;
     }
 }
