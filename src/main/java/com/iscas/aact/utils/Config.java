@@ -26,6 +26,7 @@ public class Config {
 
     private String strategy;
     private Boolean continueIfError;
+    private Boolean onlyExported;
 
     private Integer startApkIndex;
     private Integer startCompIndex;

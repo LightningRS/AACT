@@ -1,7 +1,6 @@
 package com.iscas.aact;
 
 import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONException;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.logcat.LogcatMonitor;
 import com.iscas.aact.logcat.handler.StackTraceHandler;
@@ -18,8 +17,18 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import net.dongliu.apk.parser.ApkFile;
 import net.dongliu.apk.parser.bean.ApkMeta;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.InputSource;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -45,6 +54,7 @@ public class TestController {
 
     private List<Path> apksPath;
     private ApkMeta currApkMeta;
+    private Document currApkManifest;
     private CompModelUtil currAppModel;
     private CompModel currCompModel;
     private final ScopeConfigUtil scopeConfig;
@@ -133,10 +143,52 @@ public class TestController {
 
                 currCompModel = currAppModel.getCompModelByIndex(currCompIndex);
                 JSONObject compJson = currAppModel.getCompModelJSONByIndex(currCompIndex);
+                boolean skipFlag = false;
+
+                // Skip inner class
+                if (currCompModel.getClassName().contains("$")) {
+                    log.warn("Component [{}] is an inner class, skip test", currCompModel.getClassName());
+                    skipFlag = true;
+                }
+
+                // Check whether the component is exported
+                boolean isExported = false;
+                if (!skipFlag) {
+                    XPath xPath = XPathFactory.newInstance().newXPath();
+                    try {
+                        NodeList activityNodes = (NodeList) xPath.evaluate(
+                                "//*[@name='" + currCompModel.getClassName() + "']",
+                                currApkManifest, XPathConstants.NODESET);
+                        if (activityNodes.getLength() == 0) {
+                            throw new Exception(String.format("Component [%s] not found in AndroidManifest.xml!",
+                                    currCompModel.getClassName()));
+                        }
+                        Node exportedAttr = activityNodes.item(0).getAttributes().getNamedItem("android:exported");
+                        if (exportedAttr != null) {
+                            isExported = exportedAttr.getTextContent().equals("true");
+                        }
+                    } catch (Exception e) {
+                        log.warn("Unable to determine exported flag due to {}", e.getClass().getSimpleName(), e);
+                    }
+
+                    // Skip non-exported components when only testing exported components
+                    if (!isExported && GlobalConfig.getOnlyExported()) {
+                        log.warn("Component [{}] is not exported, skip test", currCompModel.getClassName());
+                        skipFlag = true;
+                    }
+                }
 
                 // -------------- Only support activity now --------------
-                if (!currCompModel.getType().equals(CompModel.TYPE_ACTIVITY)) {
-                    log.warn("Skipped unsupported component type: " + currCompModel.getType());
+                if (!skipFlag && !currCompModel.getType().equals(CompModel.TYPE_ACTIVITY)) {
+                    log.warn("Component [{}] has unsupported type [{}], skip test",
+                            currCompModel.getClassName(), currCompModel.getType());
+                    skipFlag = true;
+                }
+
+                // Skip current component
+                if (skipFlag) {
+                    GlobalConfig.setStartStrategy(null);
+                    currCaseIndex = 0;
                     currCompIndex++;
                     continue;
                 }
@@ -409,6 +461,9 @@ public class TestController {
     private boolean loadApk(Path apkPath) {
         try (ApkFile apkFile = new ApkFile(apkPath.toFile())) {
             currApkMeta = apkFile.getApkMeta();
+            DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
+            currApkManifest = docBuilder.parse(new InputSource(new StringReader(apkFile.getManifestXml())));
             String apkFileName = apkPath.getFileName().toString();
             String apkFileBaseName = apkFileName.substring(0, apkFileName.lastIndexOf("."));
 
@@ -426,11 +481,8 @@ public class TestController {
             currAppModel = new CompModelUtil(compModel);
             log.info("Loaded APK [{}], with {} components to be test", apkFileName, currAppModel.getCompCount());
             return true;
-        } catch (IOException e) {
-            log.error("IOException when loading apk: {}", apkPath, e);
-            return false;
-        } catch (JSONException e) {
-            log.error("JSONException when loading apk: {}", apkPath, e);
+        } catch (Exception e) {
+            log.error("{} when loading apk: {}", e.getClass().getSimpleName(), apkPath, e);
             return false;
         }
     }

@@ -15,6 +15,7 @@ public class Main {
                 "-d", "emulator-5556",
                 "-ag",
                 "-ce",
+                // "-oe",
                 // "-ia", "4", "-ic", "2", "-it", "20", "-is", "iccBot",
                 "-st", "iccBot; random; randomWithStruct; iccBot+preset; iccBot+preset+randomWithStruct"
         };

@@ -72,6 +72,7 @@ public class ArgParser {
         }
 
         config.setContinueIfError(cmd.hasOption("ce"));
+        config.setOnlyExported(cmd.hasOption("oe"));
         config.setSeed(cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : new Date().getTime());
         config.setDeviceSerial(cmd.getOptionValue("d"));
         config.setStartApkIndex(cmd.hasOption("ia") ? Integer.parseInt(cmd.getOptionValue("ia")) : 0);
@@ -147,6 +148,8 @@ public class ArgParser {
                 "Number of the random values to generate for each field. Default=5");
         options.addOption("ce", "continue-if-error", false,
                 "Continue if error occurred when testing components. If not specified, default is false");
+        options.addOption("oe", "only-exported", false,
+                "Test exported component only. If not specified, default is false");
 
         options.addOption("smin", "str-min-length", true,
                 "Min length of the random string. Default=" + Constants.DEFAULT_RAND_STR_MIN_LENGTH);
