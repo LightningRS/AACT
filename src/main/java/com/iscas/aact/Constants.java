@@ -21,7 +21,7 @@ public class Constants {
     public static final String DEFAULT_SCOPE_CONFIG = """
             ,manifest,sendIntent,recvIntent,specIntent
             action,1,1,1,1
-            category,1,1,1,1
+            category,0,1,1,1
             data,1,1,1,1
             extra,0,1,1,0
             flag,0,1,1,1
@@ -29,31 +29,49 @@ public class Constants {
             """;
 
     public static final String[] PRESET_VALUES_CATEGORY = {
-            "android.intent.category.DEFAULT",
+            // Since Android system will automatically add Intent.CATEGORY_DEFAULT
+            // ("android.intent.category.DEFAULT") to any implicit intent, it may be
+            // no need to put this value into preset values.
+            // "android.intent.category.DEFAULT",
+
+            // Treat any component as a launcher
             "android.intent.category.LAUNCHER",
-            "android.intent.category.TEST",
-            "android.intent.category.UNIT_TEST",
-            "android.intent.category.SAMPLE_CODE"
+
+            // Only use one invalid value here right now
+            "INVALID_CATEGORY",
+
+            // "android.intent.category.TEST",
+            // "android.intent.category.UNIT_TEST",
+            // "android.intent.category.SAMPLE_CODE"
     };
 
     /* Reference: https://stackoverflow.com/a/24134677 */
     public static final String[] PRESET_VALUES_TYPE = {
-            "image/jpeg", "image/png", "image/gif",
-            "text/plain", "text/html", "text/xml",
-            "audio/mpeg", "audio/aac", "audio/wav", "audio/ogg", "audio/midi",
-            "video/mp4", "video/x-msvideo", "video/x-ms-wmv",
-            "application/pdf", "application/vnd.android.package-archive"
+            // Only use one invalid value here right now
+            "INVALID_TYPE"
+            // "image/jpeg", "image/png", "image/gif",
+            // "text/plain", "text/html", "text/xml",
+            // "audio/mpeg", "audio/aac", "audio/wav", "audio/ogg", "audio/midi",
+            // "video/mp4", "video/x-msvideo", "video/x-ms-wmv",
+            // "application/pdf", "application/vnd.android.package-archive"
     };
 
     public static final String[] PRESET_VALUES_SCHEME = {
-            "http", "https", "mailto", "ftp", "tel", "sms", "geo"
+            // Only use four common values and one invalid value
+            "http", "https", "tel", "sms", "INVALID_SCHEME"
+
+            // "http", "https", "mailto", "ftp", "tel", "sms", "geo"
     };
 
     public static final String[] PRESET_VALUES_AUTHORITY = {
-            "localhost", "127.0.0.1", "12345678", "0,0"
+            // Only use four common values and one invalid value
+            "localhost", "127.0.0.1", "12345678", "0,0", "INVALID_AUTHORITY"
     };
 
     public static final String[] PRESET_VALUES_PATH = {
-            "/", "/data", "/storage/emulated/0", "/sdcard"
+            // Only use one common value and one invalid value
+            "/", "INVALID_PATH"
+
+            // "/", "/data", "/storage/emulated/0", "/sdcard"
     };
 }

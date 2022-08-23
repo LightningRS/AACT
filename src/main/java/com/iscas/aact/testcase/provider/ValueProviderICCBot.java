@@ -72,14 +72,14 @@ public class ValueProviderICCBot extends ValueProvider {
                             combAuths.add(h);
                             if (portsTemp.size() > 0) {
                                 portsTemp.forEach(p -> {
-                                    if (!p.equals("")) combAuths.add(h + ":" + p);
+                                    if (!p.trim().equals("")) combAuths.add(h + ":" + p);
                                 });
                             }
                         }
                     });
                 } else if (portsTemp.size() > 0) {
                     portsTemp.forEach(p -> {
-                        if (!p.equals("")) combAuths.add(p);
+                        if (!p.trim().equals("")) combAuths.add(p);
                     });
                 }
                 JSONArray newAuthorityArr = new JSONArray();

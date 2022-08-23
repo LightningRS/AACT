@@ -169,20 +169,20 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
 
         // Relation between category
         if (catParams.size() > 1) {
-            Relation rCategory = new Relation(Math.min(catParams.size(), 3));
+            Relation rCategory = new Relation(Math.min(catParams.size(), 2));
             catParams.forEach(rCategory::addParam);
             sut.addRelation(rCategory);
         }
 
         // Relation between extra
         if (extraParams.size() > 1) {
-            Relation rExtra = new Relation(Math.min(extraParams.size(), 3));
+            Relation rExtra = new Relation(Math.min(extraParams.size(), 2));
             extraParams.forEach(rExtra::addParam);
             sut.addRelation(rExtra);
         }
 
         // Relation between data
-        Relation rData = new Relation(3);
+        Relation rData = new Relation(2);
         rData.addParam(sut.getParam("scheme"));
         rData.addParam(sut.getParam("authority"));
         rData.addParam(sut.getParam("path"));
@@ -252,6 +252,7 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
                 }
                 csvWriter.writeNext(values.toArray(new String[0]));
             }
+            csvWriter.close();
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
