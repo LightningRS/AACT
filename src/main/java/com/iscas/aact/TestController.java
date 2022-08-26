@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.dongliu.apk.parser.ApkFile;
 import net.dongliu.apk.parser.bean.ApkMeta;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
@@ -116,27 +117,33 @@ public class TestController {
             int apkUniqueCrashesCnt = 0;
             log.info("Processing APK [{}] ({}/{})", apksPath.get(currApkIndex), currApkIndex + 1, apksPath.size());
             Path apkPath = apksPath.get(currApkIndex);
+            boolean apkSkipFlag = false;
+
             if (!loadApk(apkPath)) {
                 log.error("Failed to load APK #{}: {}, skipped", currApkIndex + 1, apkPath);
-                continue;
+                apkSkipFlag = true;
             }
 
             // Check whether the APK is installed
-            if (!adb.isPackageInstalled(currApkMeta.getPackageName())) {
+            if (!apkSkipFlag && GlobalConfig.getTestGenMode() != TestGenMode.ONLY && !adb.isPackageInstalled(currApkMeta.getPackageName())) {
                 log.error("APK [{}] ({}) is not installed! Installing...", currApkMeta.getPackageName(), apkPath);
                 if (!adb.installSync(apkPath.toString())) {
                     log.error("Failed to install apk [{}] ({})! Skip test", currApkMeta.getPackageName(), apkPath);
-
-                    // Reset recovery parameters
-                    GlobalConfig.setStartStrategy(null);
-                    currCaseIndex = 0;
-                    currCompIndex = 0;
-                    currApkIndex++;
-
-                    // Continue for next apk
-                    continue;
+                    apkSkipFlag = true;
                 }
             }
+
+            if (apkSkipFlag) {
+                // Reset recovery parameters
+                GlobalConfig.setStartStrategy(null);
+                currCaseIndex = 0;
+                currCompIndex = 0;
+                currApkIndex++;
+
+                // Continue for next apk
+                continue;
+            }
+
             while (currCompIndex < currAppModel.getCompCount()) {
                 // Stack trace body -> Failed Message
                 Map<String, String> uniqueStackTraces = new HashMap<>();
@@ -156,15 +163,25 @@ public class TestController {
                 if (!skipFlag) {
                     XPath xPath = XPathFactory.newInstance().newXPath();
                     try {
-                        NodeList activityNodes = (NodeList) xPath.evaluate(
+                        NodeList activityNodesFull = (NodeList) xPath.evaluate(
                                 "//*[@name='" + currCompModel.getClassName() + "']",
                                 currApkManifest, XPathConstants.NODESET);
+                        NodeList activityNodesShort = (NodeList) xPath.evaluate(
+                                "//*[@name='" + currCompModel.getClassName().replaceFirst(currAppModel.getPackageName(), "") + "']",
+                                currApkManifest, XPathConstants.NODESET);
+                        NodeList activityNodes = activityNodesFull.getLength() > 0 ? activityNodesFull : activityNodesShort;
+
                         if (activityNodes.getLength() == 0) {
                             throw new Exception(String.format("Component [%s] not found in AndroidManifest.xml!",
                                     currCompModel.getClassName()));
                         }
-                        Node exportedAttr = activityNodes.item(0).getAttributes().getNamedItem("android:exported");
-                        if (exportedAttr != null) {
+                        Node activityNode = activityNodes.item(0);
+                        NodeList intentFilterNodes = ((Element) activityNode).getElementsByTagName("intent-filter");
+                        if (intentFilterNodes.getLength() > 0) {
+                            isExported = true;
+                        }
+                        Node exportedAttr = activityNode.getAttributes().getNamedItem("android:exported");
+                        if (!isExported && exportedAttr != null) {
                             isExported = exportedAttr.getTextContent().equals("true");
                         }
                     } catch (Exception e) {
