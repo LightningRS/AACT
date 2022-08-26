@@ -283,6 +283,13 @@ public class ADBInterface {
         this.shellSync(command);
     }
 
+    /**
+     * Close all system dialogs to avoid window stack overflow.
+     */
+    public void closeSystemDialogs() {
+        String command = "am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS";
+        this.shellSync(command);
+    }
 
     /**
      * Force stop an application (using <b>am start</b>).

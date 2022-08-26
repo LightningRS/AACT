@@ -428,6 +428,9 @@ public class TestController {
                                 }
                                 if (!GlobalConfig.getContinueIfError()) return;
                             }
+
+                            // Close all system dialogs to avoid window stack overflow
+                            adb.closeSystemDialogs();
                         } else if (compStateMonitor.getCompState().equals(CompStateMonitor.STATE_JUMPED)) {
                             log.info("Case JUMPED! mFocusedActivity={}, {}",
                                     compStateMonitor.getFocusedActivity(), recoveryInfo);
@@ -472,6 +475,8 @@ public class TestController {
                 log.error("IOException when walking apk directory: {}", GlobalConfig.getApkPath());
             }
         }
+        if (GlobalConfig.getRunApksInDescOrder())
+            apksPath.sort((p1, p2) -> -p1.compareTo(p2));
         log.info("Found totally {} apks to run", apksPath.size());
     }
 

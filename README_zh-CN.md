@@ -37,29 +37,30 @@ python ./scripts/runICCBot-spec.py ../data/APKs ../data/ICCResult
 
 工具默认的启动命令行为 `java -jar AACT-1.0.jar`。各参数说明如下：
 
-| 参数简称    | 参数全称                              | 是否必需 | 参数描述                                                                            | 示例值                       |
-|:--------|:----------------------------------|:----:|:--------------------------------------------------------------------------------|:--------------------------|
-| `-k`    | `--apk-path`                      |  是   | 待测 APK 的所在目录                                                                    | /path/to/apk-path         | 
-| `-i`    | `--icc-result-path`               |  是   | 待测 APK 的 ICCBot 工具分析结果所在目录                                                      | /path/to/icc-result-path  |
-| `-c`    | `--testcase-path`                 |  是   | 待测 APK 的测试用例存放目录                                                                | /path/to/testcase-path    |
-| `-st`   | `--strategy`                      |  是   | 测试所采用的的测试用例生成策略。参见 [测试用例生成策略](#测试用例生成策略)                                        | preset; random+iccBot     |
-| `-a`    | `--adb-path`                      |  否   | ADB 可执行文件路径                                                                     | /path/to/adb              |
-| `-ln`   | `--android-launcher-package-name` |  否   | Android 系统当前默认启动器包名                                                             | com.android.launcher3     |
-| `-o`    | `--scope-config`                  |  否   | 启用的 ICCBot 工具分析域。参见 [ICCBot 结果分析域设置](#ICCBot-结果分析域设置)                           | /path/to/scope-config-csv |
-| `-d`    | `--device`                        |  否   | ADB 连接到的 Android 设备序列号。当同时有多台 Android 设备连接到主控机时，必须指定该参数（可通过 `adb devices` 命令获得） | emulator-5554             |
-| `-s`    | `--seed`                          |  否   | 测试所使用的随机种子数值                                                                    | 12345678                  |
-| `-r`    | `--rand-val-num`                  |  否   | 生成随机数据时使用的随机种子数值。默认为当前毫秒级时间戳                                                    | 12345678                  |
-| `-ce`   | `--continue-if-error`             |  否   | 是否在发现崩溃时继续执行测试。默认为否（发现崩溃时立即终止测试）                                                | false                     |
-| `-smin` | `--str-min-length`                |  否   | 生成随机字符串的最小长度。默认为 1                                                              | 1                         |
-| `-smax` | `--str-max-length`                |  否   | 生成随机字符串的最大长度。默认为 20                                                             | 20                        |
-| `-ia`   | `--start-apk-index`               |  否   | 待测 APK 的起始序号。对应日志输出的 `apkIndex`。默认为 0 (*用于意外中断时继续测试*)                           | 0                         |
-| `-ic`   | `--start-component-index`         |  否   | 待测组件的起始序号。对应日志输出的 `compIndex`。默认为 0 (*用于意外中断时继续测试*)                             | 0                         |
-| `-it`   | `--start-testcase-index`          |  否   | 待测用例的起始序号。对应日志输出的 `caseIndex`。默认为 0 (*用于意外中断时继续测试*)                             | 0                         |
-| `-is`   | `--start-strategy-index`          |  否   | 待测的起始策略。对应日志输出的 `strategy`。默认为空 (*用于意外中断时继续测试*)                                 | preset+iccBot             |
-| `-ag`   | `--auto-generate`                 |  *   | 自动生成测试用例。当测试用例不存在时，会自动生成。                                                       | 无                         |
-| `-og`   | `--only-generate`                 |  *   | 仅生成测试用例。只生成测试用例，不执行测试。                                                          | 无                         |
-| `-ng`   | `--not-generate`                  |  *   | 不生成测试用例。忽略不存在的测试用例。                                                             | 无                         |
-| `-oe`   | `--only-exported`                 |  否   | 是否仅测试暴露组件 (Manifest 中显式定义 exported=true)。默认为否 (测试所有组件)                          | 无                         |
+| 参数简称    | 参数全称                               | 是否必需 | 参数描述                                                                            | 示例值                       |
+|:--------|:-----------------------------------|:----:|:--------------------------------------------------------------------------------|:--------------------------|
+| `-k`    | `--apk-path`                       |  是   | 待测 APK 的所在目录                                                                    | /path/to/apk-path         | 
+| `-i`    | `--icc-result-path`                |  是   | 待测 APK 的 ICCBot 工具分析结果所在目录                                                      | /path/to/icc-result-path  |
+| `-c`    | `--testcase-path`                  |  是   | 待测 APK 的测试用例存放目录                                                                | /path/to/testcase-path    |
+| `-st`   | `--strategy`                       |  是   | 测试所采用的的测试用例生成策略。参见 [测试用例生成策略](#测试用例生成策略)                                        | preset; random+iccBot     |
+| `-a`    | `--adb-path`                       |  否   | ADB 可执行文件路径                                                                     | /path/to/adb              |
+| `-ln`   | `--android-launcher-package-name`  |  否   | Android 系统当前默认启动器包名                                                             | com.android.launcher3     |
+| `-o`    | `--scope-config`                   |  否   | 启用的 ICCBot 工具分析域。参见 [ICCBot 结果分析域设置](#ICCBot-结果分析域设置)                           | /path/to/scope-config-csv |
+| `-d`    | `--device`                         |  否   | ADB 连接到的 Android 设备序列号。当同时有多台 Android 设备连接到主控机时，必须指定该参数（可通过 `adb devices` 命令获得） | emulator-5554             |
+| `-s`    | `--seed`                           |  否   | 测试所使用的随机种子数值                                                                    | 12345678                  |
+| `-r`    | `--rand-val-num`                   |  否   | 生成随机数据时使用的随机种子数值。默认为当前毫秒级时间戳                                                    | 12345678                  |
+| `-ce`   | `--continue-if-error`              |  否   | 是否在发现崩溃时继续执行测试。默认为否（发现崩溃时立即终止测试）                                                | false                     |
+| `-smin` | `--str-min-length`                 |  否   | 生成随机字符串的最小长度。默认为 1                                                              | 1                         |
+| `-smax` | `--str-max-length`                 |  否   | 生成随机字符串的最大长度。默认为 20                                                             | 20                        |
+| `-ia`   | `--start-apk-index`                |  否   | 待测 APK 的起始序号。对应日志输出的 `apkIndex`。默认为 0 (*用于意外中断时继续测试*)                           | 0                         |
+| `-ic`   | `--start-component-index`          |  否   | 待测组件的起始序号。对应日志输出的 `compIndex`。默认为 0 (*用于意外中断时继续测试*)                             | 0                         |
+| `-it`   | `--start-testcase-index`           |  否   | 待测用例的起始序号。对应日志输出的 `caseIndex`。默认为 0 (*用于意外中断时继续测试*)                             | 0                         |
+| `-is`   | `--start-strategy-index`           |  否   | 待测的起始策略。对应日志输出的 `strategy`。默认为空 (*用于意外中断时继续测试*)                                 | preset+iccBot             |
+| `-ag`   | `--auto-generate`                  |  *   | 自动生成测试用例。当测试用例不存在时，会自动生成。                                                       | 无                         |
+| `-og`   | `--only-generate`                  |  *   | 仅生成测试用例。只生成测试用例，不执行测试。                                                          | 无                         |
+| `-ng`   | `--not-generate`                   |  *   | 不生成测试用例。忽略不存在的测试用例。                                                             | 无                         |
+| `-oe`   | `--only-exported`                  |  否   | 是否仅测试暴露组件 (Manifest 中显式定义 exported=true)。默认为否 (测试所有组件)                          | 无                         |
+| `-rd`   | `--run-in-desc-order`              |  否   | 是否按 APK 路径倒序执行。默认为否 (按 APK 路径顺序执行)                                              | 无                         |
 
 *注：`-ag`、`-og` 和 `-ng` 参数能且仅能三者择一。
 
