@@ -23,7 +23,9 @@ public class ScopeConfigUtil {
 
     public boolean getScopeConfig(String fieldName, String scopeName) {
         Map<String, Boolean> scopeMap = mFieldToScopeMap.get(fieldName);
-        if (scopeMap == null) return false;
+        if (scopeMap == null) {
+            return false;
+        }
         return scopeMap.get(scopeName);
     }
 
@@ -54,13 +56,15 @@ public class ScopeConfigUtil {
             String[] row = csvReader.readNext();
             List<String> scopeNames = new ArrayList<>();
             for (String scopeName : row) {
-                if (!scopeName.equals("")) scopeNames.add(scopeName);
+                if (!"".equals(scopeName)) {
+                    scopeNames.add(scopeName);
+                }
             }
             while ((row = csvReader.readNext()) != null) {
                 if (row.length > 0) {
                     String fieldName = row[0];
                     for (int i = 1; i < row.length && i - 1 < scopeNames.size(); i++) {
-                        setFieldScopeConfig(fieldName, scopeNames.get(i - 1), row[i].equals("1"));
+                        setFieldScopeConfig(fieldName, scopeNames.get(i - 1), "1".equals(row[i]));
                     }
                 }
             }

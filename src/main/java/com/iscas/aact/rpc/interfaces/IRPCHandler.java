@@ -24,9 +24,11 @@ public interface IRPCHandler extends Comparable<IRPCHandler> {
     default int compareTo(IRPCHandler o) {
         RPCHandler thisInfo = this.getClass().getAnnotation(RPCHandler.class);
         RPCHandler otherInfo = o.getClass().getAnnotation(RPCHandler.class);
-        if (thisInfo.priority() > otherInfo.priority()) return 1;
-        else if (thisInfo.priority() < otherInfo.priority()) return -1;
-        else {
+        if (thisInfo.priority() > otherInfo.priority()) {
+            return 1;
+        } else if (thisInfo.priority() < otherInfo.priority()) {
+            return -1;
+        } else {
             return thisInfo.name().compareTo(otherInfo.name());
         }
     }

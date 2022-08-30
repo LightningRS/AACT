@@ -54,17 +54,29 @@ public class CompStateMonitor {
     }
 
     public String getCompStateName() {
-        if (compState.equals(STATE_UNK)) return "UNK";
-        else if (compState.equals(STATE_DISPLAYED)) return "DISPLAYED";
-        else if (compState.equals(STATE_CLIENT_ERROR)) return "CLIENT_ERROR";
-        else if (compState.equals(STATE_INTENT_ERR)) return "INTENT_ERROR";
-        else if (compState.equals(STATE_SYS_ERR)) return "SYS_ERROR";
-        else if (compState.equals(STATE_APP_CRASHED)) return "APP_CRASHED";
-        else if (compState.equals(STATE_TIMEOUT)) return "TIMEOUT";
-        else if (compState.equals(STATE_DISPLAYED_TIMEOUT)) return "DISPLAYED_TIMEOUT";
-        else if (compState.equals(STATE_JUMPED)) return "JUMPED";
-        else if (compState.equals(STATE_SUCCESS)) return "SUCCESS";
-        else return "INVALID";
+        if (compState.equals(STATE_UNK)) {
+            return "UNK";
+        } else if (compState.equals(STATE_DISPLAYED)) {
+            return "DISPLAYED";
+        } else if (compState.equals(STATE_CLIENT_ERROR)) {
+            return "CLIENT_ERROR";
+        } else if (compState.equals(STATE_INTENT_ERR)) {
+            return "INTENT_ERROR";
+        } else if (compState.equals(STATE_SYS_ERR)) {
+            return "SYS_ERROR";
+        } else if (compState.equals(STATE_APP_CRASHED)) {
+            return "APP_CRASHED";
+        } else if (compState.equals(STATE_TIMEOUT)) {
+            return "TIMEOUT";
+        } else if (compState.equals(STATE_DISPLAYED_TIMEOUT)) {
+            return "DISPLAYED_TIMEOUT";
+        } else if (compState.equals(STATE_JUMPED)) {
+            return "JUMPED";
+        } else if (compState.equals(STATE_SUCCESS)) {
+            return "SUCCESS";
+        } else {
+            return "INVALID";
+        }
     }
 
     public String getFocusedActivity() {
@@ -163,7 +175,9 @@ public class CompStateMonitor {
     }
 
     public void onActivityDisplayed(String logCompName) {
-        if (!logCompName.equals(this.compName)) return;
+        if (!logCompName.equals(this.compName)) {
+            return;
+        }
         if (compState != STATE_UNK) {
             log.warn("Component state not UNK, ignored");
             return;

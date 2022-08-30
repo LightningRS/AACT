@@ -10,7 +10,9 @@ public class SortedArrayList<T extends Comparable<T>> extends CopyOnWriteArrayLi
             int index = 0;
             if (this.size() > 0) {
                 index = Collections.binarySearch(this, t);
-                if (index < 0) index = ~index;
+                if (index < 0) {
+                    index = ~index;
+                }
             }
             super.add(index, t);
         }

@@ -14,7 +14,9 @@ import java.util.regex.Pattern;
 public class ActivityDisplayedHandler implements ILogcatHandler {
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
-        if (logInfo.msg == null) return;
+        if (logInfo.msg == null) {
+            return;
+        }
         Pattern pattern = Pattern.compile("Displayed (?<compName>[^:]+): (?<startDelay>.*)");
         Matcher matcher = pattern.matcher(logInfo.msg);
         if (!matcher.find() || !(matcher.groupCount() == 2)) {

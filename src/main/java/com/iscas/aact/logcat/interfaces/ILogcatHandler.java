@@ -11,9 +11,11 @@ public interface ILogcatHandler extends Comparable<ILogcatHandler> {
     default int compareTo(ILogcatHandler o) {
         LogcatHandler thisInfo = this.getClass().getAnnotation(LogcatHandler.class);
         LogcatHandler otherInfo = o.getClass().getAnnotation(LogcatHandler.class);
-        if (thisInfo.priority() > otherInfo.priority()) return 1;
-        else if (thisInfo.priority() < otherInfo.priority()) return -1;
-        else {
+        if (thisInfo.priority() > otherInfo.priority()) {
+            return 1;
+        } else if (thisInfo.priority() < otherInfo.priority()) {
+            return -1;
+        } else {
             return thisInfo.name().compareTo(otherInfo.name());
         }
     }

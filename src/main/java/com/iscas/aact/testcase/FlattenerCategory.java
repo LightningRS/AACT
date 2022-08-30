@@ -10,7 +10,9 @@ public class FlattenerCategory extends Flattener {
     @Override
     public int flatten(JSONObject valueSet) {
         JSONArray categories = valueSet.getJSONArray("category");
-        if (categories == null) return 0;
+        if (categories == null) {
+            return 0;
+        }
         for (String category : categories.toJavaList(String.class)) {
             String cName = "category_" + b32encode(category);
             JSONArray cValues = new JSONArray();

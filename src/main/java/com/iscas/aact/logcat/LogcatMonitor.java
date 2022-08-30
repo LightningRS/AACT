@@ -66,7 +66,9 @@ public class LogcatMonitor {
     public ILogcatHandler getHandlerByName(String handlerName) {
         for (ILogcatHandler handler : mHandlerList) {
             LogcatHandler handlerInfo = handler.getClass().getAnnotation(LogcatHandler.class);
-            if (handlerInfo.name().equals(handlerName)) return handler;
+            if (handlerInfo.name().equals(handlerName)) {
+                return handler;
+            }
         }
         return null;
     }
@@ -81,18 +83,26 @@ public class LogcatMonitor {
     }
 
     private boolean checkHandlerConditions(LogcatHandler handlerInfo, LogInfo logInfo) {
-        if (!handlerInfo.regex().equals("")) {
+        if (!"".equals(handlerInfo.regex())) {
             Pattern pattern = Pattern.compile(handlerInfo.regex());
             Matcher matcher = pattern.matcher(logInfo.original);
-            if (!matcher.find()) return false;
+            if (!matcher.find()) {
+                return false;
+            }
         }
-        if (!handlerInfo.tag().equals("")) {
-            if (logInfo.tag == null) return false;
-            if (!logInfo.tag.equals(handlerInfo.tag())) return false;
+        if (!"".equals(handlerInfo.tag())) {
+            if (logInfo.tag == null) {
+                return false;
+            }
+            if (!logInfo.tag.equals(handlerInfo.tag())) {
+                return false;
+            }
         }
         if (handlerInfo.keywords().length > 0) {
             for (String keyword : handlerInfo.keywords()) {
-                if (!logInfo.original.contains(keyword)) return false;
+                if (!logInfo.original.contains(keyword)) {
+                    return false;
+                }
             }
         }
         return true;

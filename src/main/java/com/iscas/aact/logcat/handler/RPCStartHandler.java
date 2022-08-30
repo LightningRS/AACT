@@ -16,7 +16,9 @@ public class RPCStartHandler implements ILogcatHandler {
 
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
-        if (logInfo.msg == null) return;
+        if (logInfo.msg == null) {
+            return;
+        }
         Pattern pattern = Pattern.compile("Test RPCServer started at port (?<port>\\d+)");
         Matcher matcher = pattern.matcher(logInfo.msg);
         if (!matcher.find()) {

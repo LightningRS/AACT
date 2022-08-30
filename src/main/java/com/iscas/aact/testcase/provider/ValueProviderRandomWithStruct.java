@@ -52,7 +52,9 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
             extraData = JSON.parseObject(extraData.toJSONString());
             JSONArray mergedValues = new JSONArray();
             for (String scopeName : extraData.keySet()) {
-                if (!scopeCfg.getScopeConfig("extra", scopeName)) continue;
+                if (!scopeCfg.getScopeConfig("extra", scopeName)) {
+                    continue;
+                }
                 mergeCompJSONArrRecur(mergedValues, extraData.getJSONArray(scopeName));
             }
             randomizeExtraValuesRecur(null, mergedValues);
@@ -75,7 +77,9 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
                 randomizeExtraValuesRecur(rootObj, rootObj.get(name));
             }
         } else if (root instanceof JSONArray jsonArr) {
-            if (jsonArr.size() == 0) return;
+            if (jsonArr.size() == 0) {
+                return;
+            }
             Object firstObj = jsonArr.get(0);
             if (firstObj instanceof String) {
                 jsonArr.clear();
@@ -83,7 +87,7 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
                     String type = parentJsonObj.getString("type");
                     if (type != null) {
                         type = type.replaceAll("java\\.lang\\.", "");
-                        if (type.equals("boolean") || type.equals("Boolean")) {
+                        if ("boolean".equals(type) || "Boolean".equals(type)) {
                             jsonArr.addAll(Arrays.asList("true", "false"));
                         } else {
                             Collection<String> genValues = generateRandomValues(type, cntPerField);

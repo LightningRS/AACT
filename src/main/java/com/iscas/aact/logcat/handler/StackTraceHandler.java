@@ -43,15 +43,21 @@ public class StackTraceHandler implements ILogcatHandler {
         assert mTraceHeadInfoQueue.size() == mTraceBlockQueue.size();
         res.headInfo = mTraceHeadInfoQueue.poll();
         res.body = mTraceBlockQueue.poll();
-        if (res.headInfo == null || res.body == null) return null;
+        if (res.headInfo == null || res.body == null) {
+            return null;
+        }
         return res;
     }
 
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
-        if (logInfo.msg == null) return;
+        if (logInfo.msg == null) {
+            return;
+        }
         if (logInfo.msg.startsWith("Caused by:")) {
-            if (mLastLineInfo == null || !mLastLineInfo.msg.startsWith("\tat")) return;
+            if (mLastLineInfo == null || !mLastLineInfo.msg.startsWith("\tat")) {
+                return;
+            }
         } else if (!logInfo.msg.startsWith("\tat")) {
             return;
         }

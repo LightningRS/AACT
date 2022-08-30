@@ -34,15 +34,19 @@ public class ValueProviderICCBot extends ValueProvider {
         }
     }
 
+    @Override
     public JSONObject getValueSet() {
+        if (fullValueSet == null) {
+            return null;
+        }
         JSONObject mergedValueSetObj = new JSONObject();
-        if (fullValueSet == null) return null;
+        updateScopeCfgByMIST();
         JSONObject fullValueSetDup = JSON.parseObject(fullValueSet.toJSONString());
         for (String fieldName : fullValueSetDup.keySet()) {
             String realFieldName = ICCBotUtils.getRealFieldName(fieldName);
             JSONObject fieldValues = fullValueSetDup.getJSONObject(fieldName);
 
-            if (realFieldName.equals("data")) {
+            if ("data".equals(realFieldName)) {
                 Set<String> hostsTemp = new HashSet<>();
                 Set<String> portsTemp = new HashSet<>();
                 for (String dataFieldName : fieldValues.keySet()) {
@@ -50,18 +54,21 @@ public class ValueProviderICCBot extends ValueProvider {
                     String realDataFieldName = ICCBotUtils.getRealFieldName(dataFieldName);
                     JSONArray mergedValues = new JSONArray();
                     for (String scopeName : dataFieldValues.keySet()) {
-                        if (!scopeCfg.getScopeConfig("data", scopeName)) continue;
+                        if (!scopeCfg.getScopeConfig("data", scopeName)) {
+                            continue;
+                        }
 
-                        if (realDataFieldName.equals("host")) {
+                        if ("host".equals(realDataFieldName)) {
                             hostsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class));
-                        } else if (realDataFieldName.equals("port")) {
+                        } else if ("port".equals(realDataFieldName)) {
                             portsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class));
                         } else {
                             mergeCompJSONArrRecur(mergedValues, dataFieldValues.getJSONArray(scopeName));
                         }
                     }
-                    if (!realDataFieldName.equals("host") && !realDataFieldName.equals("port"))
+                    if (!"host".equals(realDataFieldName) && !"port".equals(realDataFieldName)) {
                         mergedValueSetObj.put(realDataFieldName, mergedValues);
+                }
                 }
 
                 Set<String> combAuths = new HashSet<>();
@@ -71,14 +78,18 @@ public class ValueProviderICCBot extends ValueProvider {
                             combAuths.add(h);
                             if (portsTemp.size() > 0) {
                                 portsTemp.forEach(p -> {
-                                    if (!p.trim().equals("")) combAuths.add(h + ":" + p);
+                                    if (!"".equals(p.trim())) {
+                                        combAuths.add(h + ":" + p);
+                                    }
                                 });
                             }
                         }
                     });
                 } else if (portsTemp.size() > 0) {
                     portsTemp.forEach(p -> {
-                        if (!p.trim().isBlank()) combAuths.add(p);
+                        if (!p.trim().isBlank()) {
+                            combAuths.add(p);
+                        }
                     });
                 }
                 JSONArray newAuthorityArr = new JSONArray();
@@ -92,7 +103,9 @@ public class ValueProviderICCBot extends ValueProvider {
             } else {
                 JSONArray mergedValues = new JSONArray();
                 for (String scopeName : fieldValues.keySet()) {
-                    if (!scopeCfg.getScopeConfig(realFieldName, scopeName)) continue;
+                    if (!scopeCfg.getScopeConfig(realFieldName, scopeName)) {
+                        continue;
+                    }
                     mergeCompJSONArrRecur(mergedValues, fieldValues.getJSONArray(scopeName));
                 }
                 mergedValueSetObj.put(realFieldName, mergedValues);

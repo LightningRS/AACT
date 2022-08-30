@@ -50,9 +50,9 @@ public class ADBInterface {
         List<String> cmd = new ArrayList<>();
         cmd.add(this.adbExecPath.toString());
         if (this.deviceSerial != null
-                && !args[0].equals("devices")
-                && !args[0].equals("start-server")
-                && !args[0].equals("kill-server")
+                && !"devices".equals(args[0])
+                && !"start-server".equals(args[0])
+                && !"kill-server".equals(args[0])
         ) {
             cmd.add("-s");
             cmd.add(this.deviceSerial);
@@ -73,7 +73,9 @@ public class ADBInterface {
 
     private ADBResult callADBSync(String... args) {
         Process p = this.callADB(args);
-        if (p == null) return null;
+        if (p == null) {
+            return null;
+        }
         StringBuilder stdoutBuffer = new StringBuilder();
         StringBuilder stderrBuffer = new StringBuilder();
         try {
@@ -138,7 +140,7 @@ public class ADBInterface {
             return false;
         }
         res = this.callADBSync("get-state");
-        if (res == null || res.out == null || !res.out.equals("device")) {
+        if (res == null || res.out == null || !"device".equals(res.out)) {
             log.error("adb get-state returned error! res:\n{}", res);
             return false;
         }
@@ -245,9 +247,15 @@ public class ADBInterface {
     public boolean installSync(String apkPath) {
         String[] command = Arrays.asList("install", "-g", apkPath).toArray(String[]::new);
         ADBResult res = this.callADBSync(command);
-        if (res == null) return false;
-        if (res.out != null && res.out.contains("Success")) return true;
-        if (res.err != null && res.err.contains("INSTALL_FAILED_ALREADY_EXISTS")) return true;
+        if (res == null) {
+            return false;
+        }
+        if (res.out != null && res.out.contains("Success")) {
+            return true;
+        }
+        if (res.err != null && res.err.contains("INSTALL_FAILED_ALREADY_EXISTS")) {
+            return true;
+        }
         log.error("Failed to install APK [{}]", apkPath);
         log.error(res.toString());
         return false;
@@ -266,8 +274,12 @@ public class ADBInterface {
             log.error("Failed to uninstall package [{}]: no result", packageId);
             return false;
         }
-        if (res.out != null && res.out.contains("Success")) return true;
-        if (res.err != null && res.err.contains("Unknown package")) return true;
+        if (res.out != null && res.out.contains("Success")) {
+            return true;
+        }
+        if (res.err != null && res.err.contains("Unknown package")) {
+            return true;
+        }
         log.error("Failed to uninstall package [{}]: error", packageId);
         log.error(res.toString());
         return false;

@@ -87,17 +87,23 @@ public class RPCController {
     }
 
     public void send(JSONObject dataObj) {
-        while (mDos == null) Thread.yield();
+        while (mDos == null) {
+            Thread.yield();
+        }
         try {
             Integer action = dataObj.getInteger("action");
             if (action != null) {
                 if (!action.equals(IRPCHandler.ACTION_INIT)) {
-                    while (!mIsReady) Thread.yield();
+                    while (!mIsReady) {
+                        Thread.yield();
+                    }
                 }
                 if (action.equals(IRPCHandler.ACTION_LOAD)) {
                     mLoadCaseCommand = dataObj;
                 } else if (action.equals(IRPCHandler.ACTION_RUN_CASE)) {
-                    while (!mIsLoaded) Thread.yield();
+                    while (!mIsLoaded) {
+                        Thread.yield();
+                    }
                 }
             }
             dataObj.put("seq", ++mSeq);
@@ -159,7 +165,9 @@ public class RPCController {
     }
 
     public void disconnect(boolean isRetry) {
-        if (!mIsReady) return;
+        if (!mIsReady) {
+            return;
+        }
         mIsReady = false;
         mIsLoaded = false;
 
@@ -190,7 +198,9 @@ public class RPCController {
             adb.startActivity(Constants.CLIENT_PKG_NAME, Constants.CLIENT_ACT_NAME);
 
             if (mLoadCaseCommand != null) {
-                while (!mIsReady) Thread.yield();
+                while (!mIsReady) {
+                    Thread.yield();
+                }
                 this.send(mLoadCaseCommand, new LoadRecvHandler());
             }
         }
