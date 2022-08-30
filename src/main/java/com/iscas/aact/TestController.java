@@ -1,6 +1,5 @@
 package com.iscas.aact;
 
-import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.logcat.LogcatMonitor;
 import com.iscas.aact.logcat.handler.StackTraceHandler;
@@ -9,27 +8,14 @@ import com.iscas.aact.rpc.CompStateMonitor;
 import com.iscas.aact.rpc.RPCController;
 import com.iscas.aact.testcase.ACTSTestcaseBuilder;
 import com.iscas.aact.testcase.ScopeConfigUtil;
-import com.iscas.aact.testcase.TestcaseBuilder;
+import com.iscas.aact.testcase.BaseTestcaseBuilder;
 import com.iscas.aact.testcase.provider.*;
 import com.iscas.aact.utils.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import net.dongliu.apk.parser.ApkFile;
-import net.dongliu.apk.parser.bean.ApkMeta;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
 import java.io.IOException;
-import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,9 +40,7 @@ public class TestController {
     private RPCController rpcController;
 
     private List<Path> apksPath;
-    private ApkMeta currApkMeta;
-    private Document currApkManifest;
-    private CompModelUtil currAppModel;
+    private AppModel currAppModel;
     private CompModel currCompModel;
     private final ScopeConfigUtil scopeConfig;
     private Integer currCompState = STATE_READY;
@@ -114,7 +98,7 @@ public class TestController {
         int currCompIndex = GlobalConfig.getStartCompIndex();
         int currCaseIndex = GlobalConfig.getStartCaseIndex();
         while (currApkIndex < apksPath.size()) {
-            int apkUniqueCrashesCnt = 0;
+            // int apkUniqueCrashesCnt = 0;
             log.info("Processing APK [{}] ({}/{})", apksPath.get(currApkIndex), currApkIndex + 1, apksPath.size());
             Path apkPath = apksPath.get(currApkIndex);
             boolean apkSkipFlag = false;
@@ -125,10 +109,10 @@ public class TestController {
             }
 
             // Check whether the APK is installed
-            if (!apkSkipFlag && GlobalConfig.getTestGenMode() != TestGenMode.ONLY && !adb.isPackageInstalled(currApkMeta.getPackageName())) {
-                log.error("APK [{}] ({}) is not installed! Installing...", currApkMeta.getPackageName(), apkPath);
+            if (!apkSkipFlag && GlobalConfig.getTestGenMode() != TestGenMode.ONLY && !adb.isPackageInstalled(currAppModel.getPackageName())) {
+                log.error("APK [{}] ({}) is not installed! Installing...", currAppModel.getPackageName(), apkPath);
                 if (!adb.installSync(apkPath.toString())) {
-                    log.error("Failed to install apk [{}] ({})! Skip test", currApkMeta.getPackageName(), apkPath);
+                    log.error("Failed to install apk [{}] ({})! Skip test", currAppModel.getPackageName(), apkPath);
                     apkSkipFlag = true;
                 }
             }
@@ -146,10 +130,10 @@ public class TestController {
 
             while (currCompIndex < currAppModel.getCompCount()) {
                 // Stack trace body -> Failed Message
-                Map<String, String> uniqueStackTraces = new HashMap<>();
+                // Map<String, String> uniqueStackTraces = new HashMap<>();
 
                 currCompModel = currAppModel.getCompModelByIndex(currCompIndex);
-                JSONObject compJson = currAppModel.getCompModelJSONByIndex(currCompIndex);
+                JSONObject compJson = currCompModel.getCompJson();
                 boolean skipFlag = false;
 
                 // Skip inner class
@@ -158,41 +142,16 @@ public class TestController {
                     skipFlag = true;
                 }
 
+                // Check whether the component is enabled
+                if (!skipFlag && Boolean.FALSE.equals(currCompModel.getEnabled())) {
+                    log.warn("Component [{} is not enabled, skip test", currCompModel.getClassName());
+                    skipFlag = true;
+                }
+
                 // Check whether the component is exported
-                boolean isExported = false;
-                if (!skipFlag) {
-                    XPath xPath = XPathFactory.newInstance().newXPath();
-                    try {
-                        NodeList activityNodesFull = (NodeList) xPath.evaluate(
-                                "//*[@name='" + currCompModel.getClassName() + "']",
-                                currApkManifest, XPathConstants.NODESET);
-                        NodeList activityNodesShort = (NodeList) xPath.evaluate(
-                                "//*[@name='" + currCompModel.getClassName().replaceFirst(currAppModel.getPackageName(), "") + "']",
-                                currApkManifest, XPathConstants.NODESET);
-                        NodeList activityNodes = activityNodesFull.getLength() > 0 ? activityNodesFull : activityNodesShort;
-
-                        if (activityNodes.getLength() == 0) {
-                            throw new Exception(String.format("Component [%s] not found in AndroidManifest.xml!",
-                                    currCompModel.getClassName()));
-                        }
-                        Node activityNode = activityNodes.item(0);
-                        NodeList intentFilterNodes = ((Element) activityNode).getElementsByTagName("intent-filter");
-                        if (intentFilterNodes.getLength() > 0) {
-                            isExported = true;
-                        }
-                        Node exportedAttr = activityNode.getAttributes().getNamedItem("android:exported");
-                        if (!isExported && exportedAttr != null) {
-                            isExported = exportedAttr.getTextContent().equals("true");
-                        }
-                    } catch (Exception e) {
-                        log.warn("Unable to determine exported flag due to {}", e.getClass().getSimpleName(), e);
-                    }
-
-                    // Skip non-exported components when only testing exported components
-                    if (!isExported && GlobalConfig.getOnlyExported()) {
-                        log.warn("Component [{}] is not exported, skip test", currCompModel.getClassName());
-                        skipFlag = true;
-                    }
+                if (!skipFlag && Boolean.FALSE.equals(currCompModel.getExported()) && GlobalConfig.getOnlyExported()) {
+                    log.warn("Component [{}] is not exported, skip test", currCompModel.getClassName());
+                    skipFlag = true;
                 }
 
                 // -------------- Only support activity now --------------
@@ -238,16 +197,16 @@ public class TestController {
                     // Only generate pending strategies
                     Map<String, ValueProvider> valueProviders = new HashMap<>() {
                         {
-                            put("preset", new ValueProviderPreset());
+                            put("preset", new ValueProviderPreset(currCompModel));
                             put("iccBot", new ValueProviderICCBot(
-                                    compJson.getJSONObject("fullValueSet"), scopeConfig
+                                    currCompModel, compJson.getJSONObject("fullValueSet"), scopeConfig
                             ));
                             put("random", new ValueProviderRandom(
-                                    GlobalConfig.getRandValNum(),
+                                    currCompModel, GlobalConfig.getRandValNum(),
                                     GlobalConfig.getStrMinLength(), GlobalConfig.getStrMaxLength()
                             ));
                             put("randomWithStruct", new ValueProviderRandomWithStruct(
-                                    compJson.getJSONObject("fullValueSet"),
+                                    currCompModel, compJson.getJSONObject("fullValueSet"),
                                     scopeConfig, GlobalConfig.getRandValNum(),
                                     GlobalConfig.getStrMinLength(), GlobalConfig.getStrMaxLength()
                             ));
@@ -269,7 +228,7 @@ public class TestController {
                             }
                         }
                         log.info("Generating by " + strategyName);
-                        TestcaseBuilder builder = new ACTSTestcaseBuilder(compJson, scopeConfig);
+                        BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(currCompModel, scopeConfig);
                         for (String providerName : providerNames) {
                             builder.addValueProvider(valueProviders.get(providerName));
                         }
@@ -330,7 +289,7 @@ public class TestController {
                     log.info("Using strategy [{}]", strategy);
                     // Waiting for testcase load finished
                     setCurrCompState(STATE_LOADING_TESTCASE);
-                    rpcController.loadTestcase(currApkMeta.getPackageName(), currCompModel.getClassName(),
+                    rpcController.loadTestcase(currAppModel.getPackageName(), currCompModel.getClassName(),
                             currCompModel.getType(), strategy);
                     while (currCompState == STATE_LOADING_TESTCASE) {
                         Thread.yield();
@@ -347,6 +306,7 @@ public class TestController {
                     }
 
                     // Run testcases
+                    int caseRetryCnt = 0;
                     while (currCaseIndex < currCaseCount) {
                         String recoveryInfo = String.format(
                                 "compName=%s, apkIndex=%s, compIndex=%s, caseIndex=%s, strategy=%s",
@@ -371,8 +331,7 @@ public class TestController {
                         // Waiting for consuming all trace blocks
                         try {
                             Thread.sleep(1000);
-                        } catch (InterruptedException ignored) {
-                        }
+                        } catch (InterruptedException ignored) {}
                         StackTraceHandler stHandler = logcatMonitor.getHandlerByClass(StackTraceHandler.class);
                         TraceBlock mergedTraceBlock = new TraceBlock();
                         while (stHandler.hasTraceBlock()) {
@@ -394,8 +353,14 @@ public class TestController {
                             log.error("Case running ERROR! Try to rollback! state={}, mFocusedActivity={}, {}",
                                     compStateMonitor.getCompStateName(), compStateMonitor.getFocusedActivity(),
                                     recoveryInfo);
+                            caseRetryCnt++;
+                            if (caseRetryCnt > Constants.CASE_MAX_RETRY) {
+                                log.error("Max retry time of running case exceed! Skip the current case!");
+                                currCaseIndex++;
+                            }
                             continue;
                         }
+                        caseRetryCnt = 0;
 
                         // Retrieve stack trace block
                         if (mergedTraceBlock.headInfo == null) {
@@ -406,8 +371,10 @@ public class TestController {
                             log.warn("Stacktrace caught: {}\n{}", mergedTraceBlock.headInfo, mergedTraceBlock.body);
                             if (mergedTraceBlock.body.contains("android.content.ActivityNotFoundException")) {
                                 // If ActivityNotFoundException detected, it means the component is failed to find.
+                                // Usually it is due to the android:enabled="false" defined in AndroidManifest.xml.
                                 // Should skip the component directly.
                                 log.error("ActivityNotFoundException occurred, skip the current component!");
+                                log.info("Finished running testcase #{}", currCaseIndex + 1);
                                 break;
                             }
                         }
@@ -418,15 +385,17 @@ public class TestController {
                                     recoveryInfo);
 
                             if (compStateMonitor.getCompState() >= CompStateMonitor.STATE_APP_CRASHED) {
-                                if (mergedTraceBlock.headInfo != null &&
-                                        !uniqueStackTraces.containsKey(mergedTraceBlock.body)) {
-                                    String resultMsg = String.format(
-                                            "state=%s, %s", compStateMonitor.getCompStateName(), recoveryInfo
-                                    );
-                                    uniqueStackTraces.put(mergedTraceBlock.body, resultMsg);
-                                    log.info("Unique crash #{} detected! " + resultMsg, uniqueStackTraces.size());
+                                // if (mergedTraceBlock.headInfo != null &&
+                                //         !uniqueStackTraces.containsKey(mergedTraceBlock.body)) {
+                                //     String resultMsg = String.format(
+                                //             "state=%s, %s", compStateMonitor.getCompStateName(), recoveryInfo
+                                //     );
+                                //     uniqueStackTraces.put(mergedTraceBlock.body, resultMsg);
+                                //     log.info("Unique crash #{} detected! " + resultMsg, uniqueStackTraces.size());
+                                // }
+                                if (!GlobalConfig.getContinueIfError()) {
+                                    return;
                                 }
-                                if (!GlobalConfig.getContinueIfError()) return;
                             }
 
                             // Close all system dialogs to avoid window stack overflow
@@ -446,14 +415,16 @@ public class TestController {
                     currCaseIndex = 0;
                 }
                 adb.forceStopApp(currAppModel.getPackageName());
-                log.info("Finished testing component [{}], with {} unique crashes",
-                        currCompModel.getClassName(), uniqueStackTraces.size());
-                apkUniqueCrashesCnt += uniqueStackTraces.size();
+                log.info("Finished testing component [{}]", currCompModel.getClassName());
+                // log.info("Finished testing component [{}], with {} unique crashes",
+                //     currCompModel.getClassName(), uniqueStackTraces.size());
+                //     apkUniqueCrashesCnt += uniqueStackTraces.size();
                 currCompIndex++;
             }
             if (!GlobalConfig.getTestGenMode().equals(TestGenMode.ONLY)) {
                 adb.forceStopApp(currAppModel.getPackageName());
-                log.info("Finished testing APK [{}], with {} unique crashes", apksPath.get(currApkIndex), apkUniqueCrashesCnt);
+                // log.info("Finished testing APK [{}], with {} unique crashes", apksPath.get(currApkIndex), apkUniqueCrashesCnt);
+                log.info("Finished testing APK [{}]", apksPath.get(currApkIndex));
             } else {
                 log.info("Finished generating testcases for APK [{}]", apksPath.get(currApkIndex));
             }
@@ -469,44 +440,28 @@ public class TestController {
         } else {
             try (Stream<Path> entries = Files.walk(GlobalConfig.getApkPath())) {
                 entries.forEach(path -> {
-                    if (path.toString().endsWith(".apk")) apksPath.add(path);
+                    if (path.toString().endsWith(".apk")) {
+                        apksPath.add(path);
+                    }
                 });
             } catch (IOException e) {
                 log.error("IOException when walking apk directory: {}", GlobalConfig.getApkPath());
             }
         }
-        if (GlobalConfig.getRunApksInDescOrder())
+        if (GlobalConfig.getRunApksInDescOrder()) {
             apksPath.sort((p1, p2) -> -p1.compareTo(p2));
+        }
         log.info("Found totally {} apks to run", apksPath.size());
     }
 
     private boolean loadApk(Path apkPath) {
-        try (ApkFile apkFile = new ApkFile(apkPath.toFile())) {
-            currApkMeta = apkFile.getApkMeta();
-            DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
-            currApkManifest = docBuilder.parse(new InputSource(new StringReader(apkFile.getManifestXml())));
-            String apkFileName = apkPath.getFileName().toString();
-            String apkFileBaseName = apkFileName.substring(0, apkFileName.lastIndexOf("."));
-
-            // Load Component Model extracted by ICCBot
-            Path compModelJsonPath = Paths.get(
-                    GlobalConfig.getIccResultPath().toString(),
-                    apkFileBaseName + "/ICCSpecification/ComponentModel.json");
-            if (!Files.exists(compModelJsonPath)) {
-                log.error("ComponentModel file [{}] for app [{}] ({}) not found!",
-                        compModelJsonPath, apkFileBaseName, currApkMeta.getPackageName());
-                return false;
-            }
-            String compModelStr = Files.readString(compModelJsonPath);
-            JSONObject compModel = JSON.parseObject(compModelStr);
-            currAppModel = new CompModelUtil(compModel);
-            log.info("Loaded APK [{}], with {} components to be test", apkFileName, currAppModel.getCompCount());
-            return true;
+        try {
+            currAppModel = new AppModel(apkPath);
         } catch (Exception e) {
             log.error("{} when loading apk: {}", e.getClass().getSimpleName(), apkPath, e);
             return false;
         }
+        return true;
     }
 
     public void setCurrCompState(int state) {

@@ -4,6 +4,8 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.testcase.provider.*;
+import com.iscas.aact.utils.CompModel;
+import com.iscas.aact.utils.Config;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -24,20 +26,17 @@ public class TestcaseBuilderTest {
             JSONObject modelObj = JSON.parseObject(Files.readString(testModel));
             JSONArray compsArr = modelObj.getJSONArray("components");
 
-            JSONObject presetValues = new ValueProviderPreset().getValueSet();
+            JSONObject compObj = compsArr.getJSONObject(39);
+            CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
+            String pkgName = modelObj.getString("package");
+            String compName = compModel.getClassName();
+            BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
+
+            JSONObject presetValues = new ValueProviderPreset(compModel).getValueSet();
             assertNotNull(presetValues);
 
-            JSONObject compObj = compsArr.getJSONObject(39);
-            System.out.println(compObj.getString("className"));
-            TestcaseBuilder builder = new ACTSTestcaseBuilder(compObj);
-
-//            JSONObject randValueSet = ValueProviderRandom.getRandomValueSet(5);
-//            System.out.println(randValueSet.toJSONString());
-//
-//            JSONObject randWithStructValueSet = ValueProviderRandomWithStruct.getRandomWithStructValueSet(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig(), 5);
-//            System.out.println(randWithStructValueSet.toJSONString());
-
-            ValueProvider iccBotProvider = new ValueProviderICCBot(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig());
+            ValueProvider iccBotProvider = new ValueProviderICCBot(
+                    compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig());
             builder.addValueSet(iccBotProvider.getValueSet());
             builder.addValueSet(presetValues);
             builder.build(outputCSV.toString());
@@ -54,14 +53,19 @@ public class TestcaseBuilderTest {
             JSONObject modelObj = JSON.parseObject(Files.readString(testModel));
             JSONArray compsArr = modelObj.getJSONArray("components");
 
-            JSONObject presetValues = new ValueProviderPreset().getValueSet();
-            assertNotNull(presetValues);
-
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
+                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", compObj.getString("className") + ".csv").toAbsolutePath();
-                TestcaseBuilder builder = new ACTSTestcaseBuilder(compObj);
+                BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 
-                JSONObject iccBotValueSet = new ValueProviderICCBot(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
+                String pkgName = modelObj.getString("package");
+                String compName = compModel.getClassName();
+
+                JSONObject presetValues = new ValueProviderPreset(compModel).getValueSet();
+                assertNotNull(presetValues);
+
+                JSONObject iccBotValueSet = new ValueProviderICCBot(
+                        compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
                 if (iccBotValueSet != null) builder.addValueSet(iccBotValueSet);
                 builder.addValueSet(presetValues);
                 builder.build(outputCSV.toString());
@@ -79,14 +83,19 @@ public class TestcaseBuilderTest {
             JSONObject modelObj = JSON.parseObject(Files.readString(testModel));
             JSONArray compsArr = modelObj.getJSONArray("components");
 
-            JSONObject presetValues = new ValueProviderPreset().getValueSet();
-            assertNotNull(presetValues);
-
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
+                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", compObj.getString("className") + ".csv").toAbsolutePath();
-                TestcaseBuilder builder = new ACTSTestcaseBuilder(compObj);
+                BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 
-                JSONObject iccBotValueSet = new ValueProviderICCBot(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
+                String pkgName = modelObj.getString("package");
+                String compName = compModel.getClassName();
+
+                JSONObject presetValues = new ValueProviderPreset(compModel).getValueSet();
+                assertNotNull(presetValues);
+
+                JSONObject iccBotValueSet = new ValueProviderICCBot(
+                        compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
                 if (iccBotValueSet != null) builder.addValueSet(iccBotValueSet);
                 builder.addValueSet(presetValues);
                 builder.build(outputCSV.toString());
@@ -105,20 +114,26 @@ public class TestcaseBuilderTest {
     void buildWithAll4Strategies(String modelName) {
         Path testModel = Paths.get("src", "test", "resources", modelName).toAbsolutePath();
         assertTrue(Files.exists(testModel));
+        Config.getInstance().setSeed(12345678L);
         try {
             JSONObject modelObj = JSON.parseObject(Files.readString(testModel));
             JSONArray compsArr = modelObj.getJSONArray("components");
 
-            JSONObject presetValues = new ValueProviderPreset().getValueSet();
-            assertNotNull(presetValues);
-
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
+                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", "all4strategies", compObj.getString("className") + ".csv").toAbsolutePath();
-                TestcaseBuilder builder = new ACTSTestcaseBuilder(compObj);
+                BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 
-                JSONObject iccBotValueSet = new ValueProviderICCBot(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
-                JSONObject randValueSet = new ValueProviderRandom(5).getValueSet();
-                JSONObject randWithStructValueSet = new ValueProviderRandomWithStruct(compObj.getJSONObject("fullValueSet"), builder.getScopeConfig(), 5).getValueSet();
+                String pkgName = modelObj.getString("package");
+                String compName = compModel.getClassName();
+
+                JSONObject presetValues = new ValueProviderPreset(compModel).getValueSet();
+                assertNotNull(presetValues);
+
+                JSONObject iccBotValueSet = new ValueProviderICCBot(compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig()).getValueSet();
+                JSONObject randValueSet = new ValueProviderRandom(compModel, 5).getValueSet();
+                JSONObject randWithStructValueSet = new ValueProviderRandomWithStruct(
+                        compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig(), 5).getValueSet();
                 if (iccBotValueSet != null) builder.addValueSet(iccBotValueSet);
                 if (randWithStructValueSet != null) builder.addValueSet(randWithStructValueSet);
                 builder.addValueSet(randValueSet);

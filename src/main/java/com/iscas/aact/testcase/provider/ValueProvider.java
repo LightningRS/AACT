@@ -3,19 +3,25 @@ package com.iscas.aact.testcase.provider;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
+import com.iscas.aact.utils.CompModel;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 
 @Slf4j
 public abstract class ValueProvider {
-    String name;
-
-    public ValueProvider() {
-        this.name = "default";
-    }
+    protected String name;
+    protected CompModel compModel;
 
     public String getName() {
         return this.name;
+    }
+
+    public String getPackageName() {
+        return compModel.getPackageName();
+    }
+
+    public String getCompName() {
+        return compModel.getClassName();
     }
 
     public abstract JSONObject getValueSet();

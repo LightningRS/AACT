@@ -42,3 +42,4 @@ replay_pid*
 /utils/
 dependency-reduced-pom.xml
 /src/main/java/Test.java
+/src/test/resources/*.csv

@@ -27,9 +27,26 @@ public class ScopeConfigUtil {
         return scopeMap.get(scopeName);
     }
 
-    protected void setScopeConfig(String fieldName, String scopeName, Boolean value) {
+    public void setFieldScopeConfig(String fieldName, String scopeName, Boolean value) {
         Map<String, Boolean> scopeMap = mFieldToScopeMap.computeIfAbsent(fieldName, k -> new HashMap<>());
         scopeMap.put(scopeName, value);
+    }
+
+    public void replaceFieldConfig(String fieldName, Boolean value) {
+        if (mFieldToScopeMap.containsKey(fieldName)) {
+            for (Map.Entry<String, Boolean> entry: mFieldToScopeMap.get(fieldName).entrySet()) {
+                entry.setValue(value);
+            }
+        }
+    }
+
+    public void replaceScopeConfig(String fieldName, Boolean value) {
+        for (Map.Entry<String, Map<String, Boolean>> entry : mFieldToScopeMap.entrySet()) {
+            Map<String, Boolean> fieldMap = entry.getValue();
+            if (fieldMap.containsKey(fieldName)) {
+                fieldMap.put(fieldName, value);
+            }
+        }
     }
 
     public void loadScopeConfig(String pathOrContent, boolean isPath) {
@@ -43,7 +60,7 @@ public class ScopeConfigUtil {
                 if (row.length > 0) {
                     String fieldName = row[0];
                     for (int i = 1; i < row.length && i - 1 < scopeNames.size(); i++) {
-                        setScopeConfig(fieldName, scopeNames.get(i - 1), row[i].equals("1"));
+                        setFieldScopeConfig(fieldName, scopeNames.get(i - 1), row[i].equals("1"));
                     }
                 }
             }

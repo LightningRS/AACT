@@ -1,13 +1,13 @@
 package com.iscas.aact.testcase;
 
 import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
+import com.iscas.aact.utils.CompModel;
+import com.iscas.aact.utils.Config;
 import com.opencsv.CSVWriter;
 import edu.uta.cse.fireeye.common.*;
 import edu.uta.cse.fireeye.service.engine.IpoEngine;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -17,39 +17,42 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ACTSTestcaseBuilder extends TestcaseBuilder {
-    private static final Logger Log = LoggerFactory.getLogger(ACTSTestcaseBuilder.class);
-
-    public ACTSTestcaseBuilder(JSONObject compInfo) {
-        super(compInfo);
+@Slf4j
+public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
+    public ACTSTestcaseBuilder(CompModel compModel) {
+        super(compModel);
     }
 
-    public ACTSTestcaseBuilder(JSONObject compInfo, ScopeConfigUtil scopeConfig) {
-        super(compInfo, scopeConfig);
+    public ACTSTestcaseBuilder(CompModel compModel, ScopeConfigUtil scopeConfig) {
+        super(compModel, scopeConfig);
     }
 
     @Override
     public void build(String outputCSVPath) {
         if (!isValueSetModified) {
-            Log.warn("No value collected, ignored generation");
+            log.warn("No value collected, ignored generation");
             return;
         }
         // Flatten extra data
-        new FlattenerExtra().flatten(mValueSet);
-        new FlattenerCategory().flatten(mValueSet);
+        new FlattenerExtra().flatten(valueSet);
+        new FlattenerCategory().flatten(valueSet);
 
-        SUT sut = new SUT(mCompInfo.getString("className"));
+        SUT sut = new SUT(compModel.getClassName());
 
         // Add all parameters using sorted key set
         // head means that the parameter with the field name itself will be
         // placed at the head of the list.
         ArrayList<Parameter> catParams = new ArrayList<>();
         ArrayList<Parameter> extraParams = new ArrayList<>();
-        for (String pName : new TreeSet<>(mValueSet.keySet())) {
+        for (String pName : new TreeSet<>(valueSet.keySet())) {
             Parameter param = sut.addParam(pName);
-            if (pName.startsWith("category_")) catParams.add(param);
-            if (pName.startsWith("extra_")) extraParams.add(param);
-            JSONArray values = mValueSet.getJSONArray(pName);
+            if (pName.startsWith("category_")) {
+                catParams.add(param);
+            }
+            if (pName.startsWith("extra_")) {
+                extraParams.add(param);
+            }
+            JSONArray values = valueSet.getJSONArray(pName);
             for (String value : values.toJavaList(String.class)) {
                 param.addValue(value);
             }
@@ -97,13 +100,16 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
 
             // Build constraints for bundles
             for (Parameter extraParam : extraParams) {
-                if (!extraParam.getName().endsWith("_bundle")) continue;
+                if (!extraParam.getName().endsWith("_bundle")) {
+                    continue;
+                }
                 String bdName = extraParam.getName();
                 Pattern pattern = Pattern.compile("^extra_(?<parentId>\\d+)_(?<nodeId>\\d+)_" +
                         "(?<nodeName>[A-Za-z\\d]+)_(?<nodeType>[A-Za-z\\d_$.]+)$");
                 Matcher matcher = pattern.matcher(bdName);
-                if (!matcher.find() || !(matcher.groupCount() == 4))
+                if (!matcher.find() || !(matcher.groupCount() == 4)) {
                     throw new RuntimeException("Extra name pattern match failed: " + bdName);
+                }
                 String nodeId = matcher.group("nodeId");
                 ArrayList<Parameter> childParams = new ArrayList<>();
                 List<String> childParamsConNull = new ArrayList<>();
@@ -115,7 +121,9 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
                         childParamsConNotNull.add(param.getName() + " != \"" + Constants.VAL_NULL + "\"");
                     }
                 }
-                if (childParams.size() == 0) continue;
+                if (childParams.size() == 0) {
+                    continue;
+                }
 
                 // child parameters relation
                 // if (childParams.size() > 1) {
@@ -159,7 +167,7 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
         sut.addConstraint(dataConReverse2);
 
         // Relation between basic fields
-        Relation rAllFields = new Relation(3);
+        Relation rAllFields = new Relation(2);
         rAllFields.addParam(sut.getParam("action"));
         rAllFields.addParam(sut.getParam("category"));
         rAllFields.addParam(sut.getParam("data"));
@@ -167,16 +175,23 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
         rAllFields.addParam(sut.getParam("type"));
         sut.addRelation(rAllFields);
 
-        // Relation between category
+        // Relation between flattened categories
         if (catParams.size() > 1) {
-            Relation rCategory = new Relation(Math.min(catParams.size(), 2));
+            Relation rCategory;
+            if (compModel.hasFieldScopeValues("sendIntent", "category")
+                    || compModel.hasFieldScopeValues("recvIntent", "category")) {
+                log.debug("Category has been used in send/recv scope, set strength to 2");
+                rCategory = new Relation(2);
+            } else {
+                rCategory = new Relation(1);
+            }
             catParams.forEach(rCategory::addParam);
             sut.addRelation(rCategory);
         }
 
         // Relation between extra
         if (extraParams.size() > 1) {
-            Relation rExtra = new Relation(Math.min(extraParams.size(), 2));
+            Relation rExtra = new Relation(2);
             extraParams.forEach(rExtra::addParam);
             sut.addRelation(rExtra);
         }
@@ -187,9 +202,14 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
         rData.addParam(sut.getParam("authority"));
         rData.addParam(sut.getParam("path"));
         sut.addRelation(rData);
-        Log.info("Generated SUT:\n" + sut);
+        log.info("Generated SUT:\n{}", sut);
 
-        sut.addDefaultRelation(2);
+        if (Config.getInstance().getMISTResult() != null &&
+                Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+            sut.addDefaultRelation(1);
+        } else {
+            sut.addDefaultRelation(2);
+        }
 
         // Generate
         TestGenProfile profile = TestGenProfile.instance();
@@ -217,8 +237,8 @@ public class ACTSTestcaseBuilder extends TestcaseBuilder {
             AtomicReference<BigInteger> fullCombSize = new AtomicReference<>(new BigInteger("1"));
             domainSizes.forEach(d -> fullCombSize.set(fullCombSize.get().multiply(new BigInteger(String.valueOf(d)))));
 
-            Log.info("numOfParams = " + numOfParams + ", numOfTest = " + numOfTests);
-            Log.info("fullCombSize = " + fullCombSize.get());
+            log.info("numOfParams = " + numOfParams + ", numOfTest = " + numOfTests);
+            log.info("fullCombSize = " + fullCombSize.get());
             List<String[]> comments = new ArrayList<>();
             comments.add(new String[]{"ACTS Test Suite Generation: " + new Date()});
             comments.add(new String[]{" '*' represents don't care value "});

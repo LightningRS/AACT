@@ -6,6 +6,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.testcase.RandomExtraDataGenerator;
 import com.iscas.aact.testcase.ScopeConfigUtil;
+import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.GlobalRandom;
 
 import java.util.*;
@@ -18,15 +19,17 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
     private final int strMaxLength;
     private Random random;
 
-    public ValueProviderRandomWithStruct(JSONObject fullValueSet, ScopeConfigUtil scopeCfg, int cntPerField) {
-        this(fullValueSet, scopeCfg, cntPerField,
+    public ValueProviderRandomWithStruct(CompModel compModel, JSONObject fullValueSet,
+                                         ScopeConfigUtil scopeCfg, int cntPerField) {
+        this(compModel, fullValueSet, scopeCfg, cntPerField,
                 Constants.DEFAULT_RAND_STR_MIN_LENGTH, Constants.DEFAULT_RAND_STR_MAX_LENGTH);
     }
 
-    public ValueProviderRandomWithStruct(JSONObject fullValueSet, ScopeConfigUtil scopeCfg,
-                                         int cntPerField, int strMinLength, int strMaxLength) {
+    public ValueProviderRandomWithStruct(CompModel compModel, JSONObject fullValueSet,
+                                         ScopeConfigUtil scopeCfg, int cntPerField, int strMinLength, int strMaxLength) {
         super();
         this.name = "randomWithStruct";
+        this.compModel = compModel;
         this.fullValueSet = fullValueSet;
         this.scopeCfg = scopeCfg;
         this.cntPerField = cntPerField;
@@ -39,7 +42,7 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
         if (fullValueSet == null) {
             return null;
         }
-        ValueProvider randomProvider = new ValueProviderRandom(this.cntPerField);
+        ValueProvider randomProvider = new ValueProviderRandom(compModel, this.cntPerField);
         JSONObject valueSet = randomProvider.getValueSet();
 
         // Merge extra structure

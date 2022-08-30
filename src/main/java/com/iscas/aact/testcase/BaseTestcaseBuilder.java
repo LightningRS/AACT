@@ -4,9 +4,9 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.testcase.provider.ValueProvider;
+import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,26 +47,26 @@ import java.util.List;
  * 目前，组合测试 Preset + ICCBot 策略下，单个组件测试用例数量 100~300 个。
  * 全部四种策略下（random r=5)，组合测试单个组件测试用例数量 900~4500 个。
  */
-public abstract class TestcaseBuilder {
-    private static final Logger Log = LoggerFactory.getLogger(TestcaseBuilder.class);
+@Slf4j
+public abstract class BaseTestcaseBuilder {
     private static final Config GlobalConfig = Config.getInstance();
-    protected final JSONObject mCompInfo;
-    protected final ScopeConfigUtil mScopeCfgUtil;
-    protected final JSONObject mValueSet;
+    protected final CompModel compModel;
+    protected final ScopeConfigUtil scopeConfig;
+    protected final JSONObject valueSet;
     protected boolean isValueSetModified = false;
-    protected List<ValueProvider> mValueProviders;
+    protected List<ValueProvider> valueProviders;
 
-    public TestcaseBuilder(JSONObject compInfo) {
-        this(compInfo, new ScopeConfigUtil());
+    public BaseTestcaseBuilder(CompModel compModel) {
+        this(compModel, new ScopeConfigUtil());
         boolean hasPath = GlobalConfig.getScopeConfigPath() != null;
-        mScopeCfgUtil.loadScopeConfig(hasPath ? GlobalConfig.getScopeConfigPath().toString() : Constants.DEFAULT_SCOPE_CONFIG, hasPath);
+        scopeConfig.loadScopeConfig(hasPath ? GlobalConfig.getScopeConfigPath().toString() : Constants.DEFAULT_SCOPE_CONFIG, hasPath);
     }
 
-    public TestcaseBuilder(JSONObject compInfo, ScopeConfigUtil scopeConfig) {
-        mValueProviders = new ArrayList<>();
-        mCompInfo = compInfo;
-        mScopeCfgUtil = scopeConfig;
-        mValueSet = new JSONObject();
+    public BaseTestcaseBuilder(CompModel compModel, ScopeConfigUtil scopeConfig) {
+        valueProviders = new ArrayList<>();
+        this.compModel = compModel;
+        this.scopeConfig = scopeConfig;
+        valueSet = new JSONObject();
         buildBaseValueSet();
     }
 
@@ -74,13 +74,13 @@ public abstract class TestcaseBuilder {
         JSONArray objBaseValues = new JSONArray();
         objBaseValues.addAll(Arrays.asList(Constants.VAL_NULL, Constants.VAL_EMPTY));
         // Deep copy
-        mValueSet.put("action", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("category", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("type", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("data", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("scheme", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("authority", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
-        mValueSet.put("path", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("action", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("category", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("type", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("data", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("scheme", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("authority", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
+        valueSet.put("path", JSONArray.parseArray(JSONArray.toJSONString(objBaseValues)));
         // extra will handle by ExtraFlattener
     }
 
@@ -93,43 +93,47 @@ public abstract class TestcaseBuilder {
     }
 
     public void addValueSet(JSONObject valueSet, boolean isBasic) {
-        if (valueSet == null || valueSet.size() == 0) return;
+        if (valueSet == null || valueSet.size() == 0) {
+            return;
+        }
         for (String fieldName : valueSet.keySet()) {
             Object fieldValues = valueSet.get(fieldName);
             if (!(fieldValues instanceof JSONArray)) {
-                Log.error("Cannot merge type [{}] into value set", fieldValues.getClass().getName());
+                log.error("Cannot merge type [{}] into value set", fieldValues.getClass().getName());
                 continue;
             }
             if (Arrays.asList("scheme", "authority", "path").contains(fieldName) && ((JSONArray) fieldValues).size() > 0) {
-                JSONArray dataArr = mValueSet.getJSONArray("data");
+                JSONArray dataArr = this.valueSet.getJSONArray("data");
                 if (!dataArr.contains(Constants.VAL_NOT_EMPTY)) dataArr.add(Constants.VAL_NOT_EMPTY);
             }
-            JSONArray orgArr = mValueSet.getJSONArray(fieldName);
+            JSONArray orgArr = this.valueSet.getJSONArray(fieldName);
             if (orgArr == null) {
                 orgArr = new JSONArray();
-                mValueSet.put(fieldName, orgArr);
+                this.valueSet.put(fieldName, orgArr);
             }
             ValueProvider.mergeCompJSONArrRecur(orgArr, (JSONArray) fieldValues);
-            if (!isBasic) isValueSetModified = true;
+            if (!isBasic) {
+                isValueSetModified = true;
+            }
         }
     }
 
     public JSONObject getValueSet() {
-        return new JSONObject(mValueSet);
+        return new JSONObject(valueSet);
     }
 
     public ScopeConfigUtil getScopeConfig() {
-        return mScopeCfgUtil;
+        return scopeConfig;
     }
 
     public void addValueProvider(ValueProvider valueProvider) {
-        mValueProviders.add(valueProvider);
+        valueProviders.add(valueProvider);
     }
 
     public void collect() {
-        for (ValueProvider provider : mValueProviders) {
+        for (ValueProvider provider : valueProviders) {
             JSONObject newValueSet = provider.getValueSet();
-            addValueSet(newValueSet, provider.getName().equals("preset"));
+            addValueSet(newValueSet, "preset".equals(provider.getName()));
         }
     }
 

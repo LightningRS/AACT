@@ -3,36 +3,35 @@ package com.iscas.aact.testcase.provider;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.iscas.aact.Constants;
 import com.iscas.aact.testcase.ScopeConfigUtil;
+import com.iscas.aact.utils.CompModel;
+import com.iscas.aact.utils.ICCBotUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashSet;
 import java.util.Set;
 
+@Slf4j
 public class ValueProviderICCBot extends ValueProvider {
     private final JSONObject fullValueSet;
     private final ScopeConfigUtil scopeCfg;
 
-    public ValueProviderICCBot(JSONObject fullValueSet, ScopeConfigUtil scopeCfg) {
+    public ValueProviderICCBot(CompModel compModel, JSONObject fullValueSet, ScopeConfigUtil scopeCfg) {
         super();
         this.name = "iccBot";
+        this.compModel = compModel;
         this.fullValueSet = fullValueSet;
         this.scopeCfg = scopeCfg;
     }
 
-    private static String getRealFieldName(String fieldName) {
-        return switch (fieldName) {
-            case "actions" -> "action";
-            case "categories" -> "category";
-            case "datas" -> "data";
-            case "schemes" -> "scheme";
-            case "hosts" -> "host";
-            case "ports" -> "port";
-            case "paths" -> "path";
-            case "extras" -> "extra";
-            case "flags" -> "flag";
-            case "types" -> "type";
-            default -> "unknown";
-        };
+    protected void updateScopeCfgByMIST() {
+        if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+            log.info("MIST result of component [{}/{}] is mustIA, only consider send/recv scope",
+                    getPackageName(), getCompName());
+            scopeCfg.replaceScopeConfig("manifest", false);
+            scopeCfg.replaceScopeConfig("specIntent", false);
+        }
     }
 
     public JSONObject getValueSet() {
@@ -40,7 +39,7 @@ public class ValueProviderICCBot extends ValueProvider {
         if (fullValueSet == null) return null;
         JSONObject fullValueSetDup = JSON.parseObject(fullValueSet.toJSONString());
         for (String fieldName : fullValueSetDup.keySet()) {
-            String realFieldName = getRealFieldName(fieldName);
+            String realFieldName = ICCBotUtils.getRealFieldName(fieldName);
             JSONObject fieldValues = fullValueSetDup.getJSONObject(fieldName);
 
             if (realFieldName.equals("data")) {
@@ -48,7 +47,7 @@ public class ValueProviderICCBot extends ValueProvider {
                 Set<String> portsTemp = new HashSet<>();
                 for (String dataFieldName : fieldValues.keySet()) {
                     JSONObject dataFieldValues = fieldValues.getJSONObject(dataFieldName);
-                    String realDataFieldName = getRealFieldName(dataFieldName);
+                    String realDataFieldName = ICCBotUtils.getRealFieldName(dataFieldName);
                     JSONArray mergedValues = new JSONArray();
                     for (String scopeName : dataFieldValues.keySet()) {
                         if (!scopeCfg.getScopeConfig("data", scopeName)) continue;
@@ -68,7 +67,7 @@ public class ValueProviderICCBot extends ValueProvider {
                 Set<String> combAuths = new HashSet<>();
                 if (hostsTemp.size() > 0) {
                     hostsTemp.forEach(h -> {
-                        if (!h.equals("")) {
+                        if (!h.isBlank()) {
                             combAuths.add(h);
                             if (portsTemp.size() > 0) {
                                 portsTemp.forEach(p -> {
@@ -79,7 +78,7 @@ public class ValueProviderICCBot extends ValueProvider {
                     });
                 } else if (portsTemp.size() > 0) {
                     portsTemp.forEach(p -> {
-                        if (!p.trim().equals("")) combAuths.add(p);
+                        if (!p.trim().isBlank()) combAuths.add(p);
                     });
                 }
                 JSONArray newAuthorityArr = new JSONArray();

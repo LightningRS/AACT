@@ -3,6 +3,7 @@ package com.iscas.aact.testcase.provider;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
+import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.GlobalRandom;
 import org.apache.commons.text.RandomStringGenerator;
 
@@ -19,17 +20,18 @@ public class ValueProviderRandom extends ValueProvider {
     private final int strMinLength;
     private final int strMaxLength;
 
-    public ValueProviderRandom() {
-        this(5);
+    public ValueProviderRandom(CompModel compModel) {
+        this(compModel, 5);
     }
 
-    public ValueProviderRandom(int cntPerField) {
-        this(cntPerField, Constants.DEFAULT_RAND_STR_MIN_LENGTH, Constants.DEFAULT_RAND_STR_MAX_LENGTH);
+    public ValueProviderRandom(CompModel compModel, int cntPerField) {
+        this(compModel, cntPerField, Constants.DEFAULT_RAND_STR_MIN_LENGTH, Constants.DEFAULT_RAND_STR_MAX_LENGTH);
     }
 
-    public ValueProviderRandom(int cntPerField, int strMinLength, int strMaxLength) {
+    public ValueProviderRandom(CompModel compModel, int cntPerField, int strMinLength, int strMaxLength) {
         super();
         this.name = "random";
+        this.compModel = compModel;
         this.cntPerField = cntPerField;
         this.strMinLength = strMinLength;
         this.strMaxLength = strMaxLength;
