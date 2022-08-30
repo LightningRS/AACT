@@ -21,7 +21,6 @@ public class MISTUtils {
         }
         boolean isExported = compModel.getExported() != null && compModel.getExported();
         if (!mistResult.containsKey(compModel.getPackageName())) {
-            log.debug("Package [{}] is not in MIST result", compModel.getPackageName());
             return;
         }
         JSONObject pkgResult = mistResult.getJSONObject(compModel.getPackageName());

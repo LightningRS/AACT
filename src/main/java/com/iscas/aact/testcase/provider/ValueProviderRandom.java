@@ -9,7 +9,7 @@ import org.apache.commons.text.RandomStringGenerator;
 
 import java.util.Random;
 
-public class ValueProviderRandom extends ValueProvider {
+public class ValueProviderRandom extends BaseValueProvider {
     protected RandomStringGenerator generator1;
     protected RandomStringGenerator generator2;
     protected RandomStringGenerator generatorUriAuthority;

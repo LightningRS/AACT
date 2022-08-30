@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.testcase.provider.*;
+import com.iscas.aact.utils.AppModel;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
 import org.junit.jupiter.api.Test;
@@ -27,7 +28,7 @@ public class TestcaseBuilderTest {
             JSONArray compsArr = modelObj.getJSONArray("components");
 
             JSONObject compObj = compsArr.getJSONObject(39);
-            CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
+            CompModel compModel = new CompModel(new AppModel(modelObj), compObj);
             String pkgName = modelObj.getString("package");
             String compName = compModel.getClassName();
             BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
@@ -35,7 +36,7 @@ public class TestcaseBuilderTest {
             JSONObject presetValues = new ValueProviderPreset(compModel).getValueSet();
             assertNotNull(presetValues);
 
-            ValueProvider iccBotProvider = new ValueProviderICCBot(
+            BaseValueProvider iccBotProvider = new ValueProviderICCBot(
                     compModel, compObj.getJSONObject("fullValueSet"), builder.getScopeConfig());
             builder.addValueSet(iccBotProvider.getValueSet());
             builder.addValueSet(presetValues);
@@ -54,7 +55,7 @@ public class TestcaseBuilderTest {
             JSONArray compsArr = modelObj.getJSONArray("components");
 
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
-                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
+                CompModel compModel = new CompModel(new AppModel(modelObj), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", compObj.getString("className") + ".csv").toAbsolutePath();
                 BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 
@@ -84,7 +85,7 @@ public class TestcaseBuilderTest {
             JSONArray compsArr = modelObj.getJSONArray("components");
 
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
-                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
+                CompModel compModel = new CompModel(new AppModel(modelObj), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", compObj.getString("className") + ".csv").toAbsolutePath();
                 BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 
@@ -120,7 +121,7 @@ public class TestcaseBuilderTest {
             JSONArray compsArr = modelObj.getJSONArray("components");
 
             for (JSONObject compObj : compsArr.toJavaList(JSONObject.class)) {
-                CompModel compModel = new CompModel(modelObj.getString("package"), compObj);
+                CompModel compModel = new CompModel(new AppModel(modelObj), compObj);
                 Path outputCSV = Paths.get("src", "test", "resources", "all4strategies", compObj.getString("className") + ".csv").toAbsolutePath();
                 BaseTestcaseBuilder builder = new ACTSTestcaseBuilder(compModel);
 

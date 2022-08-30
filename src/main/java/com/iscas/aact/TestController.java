@@ -1,14 +1,13 @@
 package com.iscas.aact;
 
-import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.logcat.LogcatMonitor;
 import com.iscas.aact.logcat.handler.StackTraceHandler;
 import com.iscas.aact.logcat.utils.TraceBlock;
 import com.iscas.aact.rpc.CompStateMonitor;
 import com.iscas.aact.rpc.RPCController;
 import com.iscas.aact.testcase.ACTSTestcaseBuilder;
-import com.iscas.aact.testcase.ScopeConfigUtil;
 import com.iscas.aact.testcase.BaseTestcaseBuilder;
+import com.iscas.aact.testcase.ScopeConfigUtil;
 import com.iscas.aact.testcase.provider.*;
 import com.iscas.aact.utils.*;
 import lombok.Getter;
@@ -133,7 +132,6 @@ public class TestController {
                 // Map<String, String> uniqueStackTraces = new HashMap<>();
 
                 currCompModel = currAppModel.getCompModelByIndex(currCompIndex);
-                JSONObject compJson = currCompModel.getCompJson();
                 boolean skipFlag = false;
 
                 // Skip inner class
@@ -187,6 +185,7 @@ public class TestController {
                             currAppModel.getPackageName() + "/" + currCompModel.getClassName() + "_" +
                                     strategyName + ".csv");
                     if (Files.exists(compTestcasePath)) {
+                        log.info("Testcases of strategy [{}] are already exist", strategyName);
                         readyStrategies.add(strategyName);
                     } else {
                         pendingStrategies.add(strategyName);
@@ -195,18 +194,18 @@ public class TestController {
 
                 if (!GlobalConfig.getTestGenMode().equals(TestGenMode.NONE)) {
                     // Only generate pending strategies
-                    Map<String, ValueProvider> valueProviders = new HashMap<>() {
+                    Map<String, BaseValueProvider> valueProviders = new HashMap<>() {
                         {
                             put("preset", new ValueProviderPreset(currCompModel));
                             put("iccBot", new ValueProviderICCBot(
-                                    currCompModel, compJson.getJSONObject("fullValueSet"), scopeConfig
+                                    currCompModel, currCompModel.getFullValueSet(), scopeConfig
                             ));
                             put("random", new ValueProviderRandom(
                                     currCompModel, GlobalConfig.getRandValNum(),
                                     GlobalConfig.getStrMinLength(), GlobalConfig.getStrMaxLength()
                             ));
                             put("randomWithStruct", new ValueProviderRandomWithStruct(
-                                    currCompModel, compJson.getJSONObject("fullValueSet"),
+                                    currCompModel, currCompModel.getFullValueSet(),
                                     scopeConfig, GlobalConfig.getRandValNum(),
                                     GlobalConfig.getStrMinLength(), GlobalConfig.getStrMaxLength()
                             ));

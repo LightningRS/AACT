@@ -11,7 +11,7 @@ import com.iscas.aact.utils.GlobalRandom;
 
 import java.util.*;
 
-public class ValueProviderRandomWithStruct extends ValueProvider {
+public class ValueProviderRandomWithStruct extends BaseValueProvider {
     private final JSONObject fullValueSet;
     private final ScopeConfigUtil scopeCfg;
     private final int cntPerField;
@@ -42,7 +42,7 @@ public class ValueProviderRandomWithStruct extends ValueProvider {
         if (fullValueSet == null) {
             return null;
         }
-        ValueProvider randomProvider = new ValueProviderRandom(compModel, this.cntPerField);
+        BaseValueProvider randomProvider = new ValueProviderRandom(compModel, this.cntPerField);
         JSONObject valueSet = randomProvider.getValueSet();
 
         // Merge extra structure

@@ -2,7 +2,7 @@ package com.iscas.aact.testcase;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
-import com.iscas.aact.testcase.provider.ValueProvider;
+import com.iscas.aact.testcase.provider.BaseValueProvider;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -14,7 +14,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayStringDiff() {
         JSONArray jsonArr1 = JSON.parseArray("[\"strValue1\"]");
         JSONArray jsonArr2 = JSON.parseArray("[\"strValue1\", \"strValue2\"]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(JSON.toJSONString(jsonArr1), JSON.toJSONString(jsonArr2));
     }
 
@@ -22,7 +22,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayStringSame() {
         JSONArray jsonArr1 = JSON.parseArray("[\"strValue1\"]");
         JSONArray jsonArr2 = JSON.parseArray("[\"strValue1\"]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(JSON.toJSONString(jsonArr1), JSON.toJSONString(jsonArr2));
     }
 
@@ -31,7 +31,7 @@ class MergeJSONArrayTest {
         JSONArray jsonArr1 = JSON.parseArray("[1,2,3]");
         JSONArray jsonArr2 = JSON.parseArray("[4,5,1]");
         String res = "[1,2,3,4,5]";
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(JSON.toJSONString(jsonArr1), res);
     }
 
@@ -39,7 +39,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayNumberSame() {
         JSONArray jsonArr1 = JSON.parseArray("[1,2,3]");
         JSONArray jsonArr2 = JSON.parseArray("[1,2,3]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(JSON.toJSONString(jsonArr1), JSON.toJSONString(jsonArr2));
     }
 
@@ -47,7 +47,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectDiff() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\"}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj2\"}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 2);
         assertEquals(jsonArr1.getJSONObject(0).getString("name"), "obj1");
         assertEquals(jsonArr1.getJSONObject(1).getString("name"), "obj2");
@@ -57,7 +57,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectSame() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\"}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\"}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         assertEquals(jsonArr1.getJSONObject(0).getString("name"), "obj1");
     }
@@ -66,7 +66,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectValuesDiff() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\", \"values\": [1, 2]}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"values\": [2, 3]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         assertEquals(jsonArr1.getJSONObject(0).getJSONArray("values").size(), 3);
     }
@@ -75,7 +75,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectValuesNullBefore() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\"}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"values\": [1, 2, 3]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         JSONArray values = jsonArr1.getJSONObject(0).getJSONArray("values");
         assertNotNull(values);
@@ -86,7 +86,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectBodyDiff() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\": \"obj1_1\"}]}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\": \"obj1_2\"}]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         JSONArray body = jsonArr1.getJSONObject(0).getJSONArray("body");
         assertNotNull(body);
@@ -99,7 +99,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectBodyNullBefore() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\"}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\": \"obj1_1\"}]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         JSONArray body = jsonArr1.getJSONObject(0).getJSONArray("body");
         assertNotNull(body);
@@ -110,7 +110,7 @@ class MergeJSONArrayTest {
     void testMergeJSONArrayObjectBodyValuesDiff() {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\":\"obj1_1\", \"values\":[1,2]}]}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\":\"obj1_1\", \"values\":[2,3]}]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
         assertEquals(jsonArr1.size(), 1);
         JSONArray body = jsonArr1.getJSONObject(0).getJSONArray("body");
         assertNotNull(body);
@@ -124,8 +124,8 @@ class MergeJSONArrayTest {
         JSONArray jsonArr1 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\":\"obj1_1\", \"values\":[1,2]}]}]");
         JSONArray jsonArr2 = JSON.parseArray("[{\"name\":\"obj1\", \"body\": [{\"name\":\"obj1_1\", \"values\":[2,3]}]}]");
         JSONArray jsonArr3 = JSON.parseArray("[{\"name\":\"obj2\", \"body\": [{\"name\":\"obj1_1\", \"values\":[1,2,3]}]}]");
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
-        ValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr3);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr2);
+        BaseValueProvider.mergeCompJSONArrRecur(jsonArr1, jsonArr3);
         assertEquals(jsonArr1.size(), 2);
         assertEquals(jsonArr1.getJSONObject(1).getString("name"), "obj2");
     }

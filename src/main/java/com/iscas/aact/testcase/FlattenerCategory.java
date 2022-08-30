@@ -6,7 +6,7 @@ import com.iscas.aact.Constants;
 
 import java.util.Arrays;
 
-public class FlattenerCategory extends Flattener {
+public class FlattenerCategory extends BaseFlattener {
     @Override
     public int flatten(JSONObject valueSet) {
         JSONArray categories = valueSet.getJSONArray("category");

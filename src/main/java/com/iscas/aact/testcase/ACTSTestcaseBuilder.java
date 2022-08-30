@@ -1,6 +1,7 @@
 package com.iscas.aact.testcase;
 
 import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
@@ -14,17 +15,20 @@ import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
 public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
+    private final SUT sut;
     public ACTSTestcaseBuilder(CompModel compModel) {
-        super(compModel);
+        this(compModel, new ScopeConfigUtil());
     }
 
     public ACTSTestcaseBuilder(CompModel compModel, ScopeConfigUtil scopeConfig) {
         super(compModel, scopeConfig);
+        sut = new SUT(compModel.getClassName());
     }
 
     @Override
@@ -36,8 +40,6 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         // Flatten extra data
         new FlattenerExtra().flatten(valueSet);
         new FlattenerCategory().flatten(valueSet);
-
-        SUT sut = new SUT(compModel.getClassName());
 
         // Add all parameters using sorted key set
         // head means that the parameter with the field name itself will be
@@ -107,7 +109,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 Pattern pattern = Pattern.compile("^extra_(?<parentId>\\d+)_(?<nodeId>\\d+)_" +
                         "(?<nodeName>[A-Za-z\\d]+)_(?<nodeType>[A-Za-z\\d_$.]+)$");
                 Matcher matcher = pattern.matcher(bdName);
-                if (!matcher.find() || !(matcher.groupCount() == 4)) {
+                if (!matcher.find() || matcher.groupCount() != 4) {
                     throw new RuntimeException("Extra name pattern match failed: " + bdName);
                 }
                 String nodeId = matcher.group("nodeId");
@@ -173,7 +175,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         rAllFields.addParam(sut.getParam("data"));
         rAllFields.addParam(sut.getParam("extra"));
         rAllFields.addParam(sut.getParam("type"));
-        sut.addRelation(rAllFields);
+        addRelation(rAllFields);
 
         // Relation between flattened categories
         if (catParams.size() > 1) {
@@ -186,14 +188,14 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 rCategory = new Relation(1);
             }
             catParams.forEach(rCategory::addParam);
-            sut.addRelation(rCategory);
+            addRelation(rCategory);
         }
 
         // Relation between extra
         if (extraParams.size() > 1) {
             Relation rExtra = new Relation(2);
             extraParams.forEach(rExtra::addParam);
-            sut.addRelation(rExtra);
+            addRelation(rExtra);
         }
 
         // Relation between data
@@ -201,7 +203,11 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         rData.addParam(sut.getParam("scheme"));
         rData.addParam(sut.getParam("authority"));
         rData.addParam(sut.getParam("path"));
-        sut.addRelation(rData);
+        addRelation(rData);
+
+        // Optimize strength by param summary
+        updateRelationByParamSummary();
+
         log.info("Generated SUT:\n{}", sut);
 
         if (Config.getInstance().getMISTResult() != null &&
@@ -276,6 +282,156 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             writer.close();
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void updateRelationByParamSummary() {
+        JSONObject paramSummary = compModel.getAppModel().getParamSummaryJson();
+        if (paramSummary == null) {
+            return;
+        }
+
+        // 获取当前组件的 paramSummary 列表
+        JSONArray compParamSummary = paramSummary.getJSONArray(compModel.getClassName());
+        if (compParamSummary == null) {
+            return;
+        }
+
+        // 构建一个参数组合列表，每个元素是一个参数组合
+        // 元素用 Map 表示，其中 key 为参数在 paramSummary 中的名称
+        // value 为参数在组合测试模型 (SUT) 中对应的 Parameter 对象
+        List<Map<String, Parameter>> paramGroups = new ArrayList<>();
+
+        for (Object pathSummaryObj : compParamSummary) {
+            Map<String, Parameter> paramMap = new HashMap<>();
+
+            // 获取当前路径下的所有参数名称
+            JSONArray pathParams = ((JSONObject) pathSummaryObj).getJSONArray("params");
+
+            // 若没有参数或参数个数少于 3 个（因强度欲设为 3）则忽略
+            if (pathParams == null || pathParams.size() < 3) {
+                continue;
+            }
+
+            // 将 JSONArray 转换为 List<String>，遍历参数列表
+            pathParams.toJavaList(String.class).stream().filter(Predicate.not(String::isEmpty))
+                    .forEach(val -> {
+
+                        // 去除 Bundle 的左右括号值
+                        if ("(".equals(val) || ")".equals(val)) {
+                            return;
+                        }
+
+                        // 对于 action, category 等基本字段
+                        // targetName 与 paramSummary 中的名称相同
+                        String targetName = val;
+
+                        // 对于 extra 字段，判断标准为是否包含减号“-”
+                        // 需要进行名称转换 (base32 编码)
+                        if (val.contains("-")) {
+                            String[] sp = val.split("-", 2);
+                            String type = sp[0].trim(), name = sp[1].trim();
+
+                            // 将 name 名称部分进行 base32 编码 并加上前后下划线
+                            // extra 字段在组合测试模型中的名称格式为 extra_{parentId}_{id}_{nameInBase32}_{typeInBase32}
+                            // 因此只需判断是否包含 “_{nameInBase32}_” 即可找到 extra 字段在组合测试模型 (SUT) 中对应的 Parameter
+                            targetName = "_" + FlattenerExtra.encodeExtraName(name) + "_";
+                        }
+
+                        // 在组合测试模型 (SUT) 中查找对应的 Parameter
+                        Parameter target = null;
+                        for (Parameter param : sut.getParams()) {
+
+                            // 优先完全匹配，若不通过，则判断 targetName 是否以下划线开头
+                            // 以下划线开头说明该字段是 extra 字段，按照 contains 方法进行匹配
+                            if (param.getName().equals(targetName)
+                                    || (targetName.startsWith("_") && param.getName().contains(targetName))
+                            ) {
+                                target = param;
+                                break;
+                            }
+                        }
+
+                        if (target == null) {
+                            // 对应参数未找到，报错抛异常
+                            String msg = String.format("Param [%s] (%s) not found in SUT! Cannot add relation!", val, targetName);
+                            log.error(msg);
+                            throw new RuntimeException(msg);
+                        } else {
+                            // 对应参数已找到，加入 paramMap
+                            paramMap.put(val, target);
+                        }
+                    });
+            paramGroups.add(paramMap);
+        }
+
+        // 按照 paramMap 的大小对 paramGroups 排序
+        // 排序后，参数数量少的组合靠前，参数数量多的组合靠后
+        paramGroups.sort(Comparator.comparingInt(Map::size));
+
+        // removedIdx 集合用于标记【已被其它参数组合包含】的参数组合
+        Set<Integer> removedIdx = new HashSet<>();
+        for (int i = 0; i < paramGroups.size() - 1; i++) {
+            for (int j = paramGroups.size() - 1; j > i; j--) {
+                // 从参数数量最少的参数组合 (p[i]) 开始检查，优先与参数数量尽可能多的参数组合 (p[j]) 对比
+
+                // 先假定 p[i] 已包含于 p[j]，flag = true
+                // 遍历 p[i] 的所有参数，若 p[i] 中任一名称的参数 不属于 p[j]，则 p[i] 未包含于 p[j]，flag = false
+                // 遍历结束后，若 flag 仍为 true，证明 p[i] 包含于 p[j]，将 i 加入 removedIdx 集合
+                Set<String> groupShortKeySet = paramGroups.get(i).keySet();
+                Set<String> groupLongKeySet = paramGroups.get(j).keySet();
+                boolean flag = true;
+                for (String shortKey : groupShortKeySet) {
+                    if (!groupLongKeySet.contains(shortKey)) {
+                        flag = false;
+                        break;
+                    }
+                }
+                if (flag) {
+                    removedIdx.add(i);
+                    break;
+                }
+            }
+        }
+        for (int i = 0; i < paramGroups.size(); i++) {
+            // 若 i 属于集合 removedIdx
+            // 则证明 参数组合 p[i] 已包含于其它参数组合
+            // 不再建立 Relation
+
+            // 否则建立一个 3 强度的 Relation，加入 SUT
+            if (!removedIdx.contains(i)) {
+                Map<String, Parameter> paramGroup = paramGroups.get(i);
+                log.info("Add relation by param summary: ({})",
+                        String.join(", ", paramGroup.keySet().stream().sorted().toList()));
+                Relation r = new Relation(3);
+                paramGroup.values().forEach(r::addParam);
+                addRelation(r);
+            }
+        }
+    }
+
+    private void addRelation(Relation r) {
+        ArrayList<Parameter> rNewParams = r.getParams();
+        ArrayList<Relation> relations = sut.getRelations();
+        int existIdx = -1;
+        for (int i = 0; i < relations.size(); i++) {
+            Relation rOld = relations.get(i);
+            ArrayList<Parameter> rOldParams = rOld.getParams();
+            boolean existFlag = true;
+            for (Parameter p : rNewParams) {
+                if (!rOldParams.contains(p)) {
+                    existFlag = false;
+                    break;
+                }
+            }
+            if (existFlag && rOld.getStrength() < r.getStrength()) {
+                rOld.setStrength(r.getStrength());
+                existIdx = i;
+                break;
+            }
+        }
+        if (existIdx == -1) {
+            sut.addRelation(r);
         }
     }
 }

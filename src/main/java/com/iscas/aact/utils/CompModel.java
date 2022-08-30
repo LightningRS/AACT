@@ -13,9 +13,7 @@ public class CompModel {
     public static final String TYPE_SERVICE = "s";
     public static final String TYPE_RECEIVER = "r";
 
-    private String packageName;
-    private String className;
-    private String type;
+    private AppModel appModel;
     private JSONObject compJson;
 
     /**
@@ -39,12 +37,29 @@ public class CompModel {
     @Nullable
     private String mistType;
 
-    public CompModel(String packageName, JSONObject compJson) {
-        this(packageName, compJson.getString("className"), compJson.getString("type"), compJson, null, null, null);
+    public CompModel(AppModel appModel, JSONObject compJson) {
+        this(appModel, compJson, null, null, null);
+    }
+
+    public String getPackageName() {
+        return appModel.getPackageName();
+    }
+
+    public String getClassName() {
+        return compJson.getString("className");
+    }
+
+    public String getType() {
+        return compJson.getString("type");
+    }
+
+    @Nullable
+    public JSONObject getFullValueSet() {
+        return compJson.getJSONObject("fullValueSet");
     }
 
     public boolean hasFieldScopeValues(String scopeName, String... fieldNames) {
-        JSONObject fieldValueSet = compJson.getJSONObject("fullValueSet");
+        JSONObject fieldValueSet = getFullValueSet();
         if (fieldValueSet == null) {
             return false;
         }

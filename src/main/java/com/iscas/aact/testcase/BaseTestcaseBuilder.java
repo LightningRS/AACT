@@ -3,7 +3,7 @@ package com.iscas.aact.testcase;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
-import com.iscas.aact.testcase.provider.ValueProvider;
+import com.iscas.aact.testcase.provider.BaseValueProvider;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * 实验设计：
- * 利用四种不同的 ValueProvider (ICCBot, Preset, Random, RandomWithStruct) 按照以下组合进行测试生成
+ * 利用四种不同的 BaseValueProvider (ICCBot, Preset, Random, RandomWithStruct) 按照以下组合进行测试生成
  * 每种组合用【组合测试】和【完备测试】各生成一次
  * 需不需要每种组合都带上 Preset？
  * a) Preset
@@ -54,7 +54,7 @@ public abstract class BaseTestcaseBuilder {
     protected final ScopeConfigUtil scopeConfig;
     protected final JSONObject valueSet;
     protected boolean isValueSetModified = false;
-    protected List<ValueProvider> valueProviders;
+    protected List<BaseValueProvider> valueProviders;
 
     public BaseTestcaseBuilder(CompModel compModel) {
         this(compModel, new ScopeConfigUtil());
@@ -104,14 +104,16 @@ public abstract class BaseTestcaseBuilder {
             }
             if (Arrays.asList("scheme", "authority", "path").contains(fieldName) && ((JSONArray) fieldValues).size() > 0) {
                 JSONArray dataArr = this.valueSet.getJSONArray("data");
-                if (!dataArr.contains(Constants.VAL_NOT_EMPTY)) dataArr.add(Constants.VAL_NOT_EMPTY);
+                if (!dataArr.contains(Constants.VAL_NOT_EMPTY)) {
+                    dataArr.add(Constants.VAL_NOT_EMPTY);
+                }
             }
             JSONArray orgArr = this.valueSet.getJSONArray(fieldName);
             if (orgArr == null) {
                 orgArr = new JSONArray();
                 this.valueSet.put(fieldName, orgArr);
             }
-            ValueProvider.mergeCompJSONArrRecur(orgArr, (JSONArray) fieldValues);
+            BaseValueProvider.mergeCompJSONArrRecur(orgArr, (JSONArray) fieldValues);
             if (!isBasic) {
                 isValueSetModified = true;
             }
@@ -126,12 +128,12 @@ public abstract class BaseTestcaseBuilder {
         return scopeConfig;
     }
 
-    public void addValueProvider(ValueProvider valueProvider) {
+    public void addValueProvider(BaseValueProvider valueProvider) {
         valueProviders.add(valueProvider);
     }
 
     public void collect() {
-        for (ValueProvider provider : valueProviders) {
+        for (BaseValueProvider provider : valueProviders) {
             JSONObject newValueSet = provider.getValueSet();
             addValueSet(newValueSet, "preset".equals(provider.getName()));
         }

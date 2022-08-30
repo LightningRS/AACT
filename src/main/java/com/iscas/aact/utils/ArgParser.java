@@ -10,16 +10,15 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Date;
 
 public class ArgParser {
     private static final Logger Log = LoggerFactory.getLogger(ArgParser.class);
-    private static final Options options = getOptions();
+    private static final Options OPTIONS = getOptions();
 
     public static boolean parse(String[] args) {
         CommandLine cmd;
         try {
-            cmd = new DefaultParser().parse(options, args);
+            cmd = new DefaultParser().parse(OPTIONS, args);
         } catch (ParseException e) {
             Log.error("Invalid options: {}", e.getMessage());
             HelpFormatter formatter = new HelpFormatter();
@@ -29,7 +28,7 @@ public class ArgParser {
                     120,
                     "java -jar TestController.jar",
                     "\nAndroid Application Component Test Controller",
-                    options,
+                    OPTIONS,
                     "\nFor more information, please refers to https://tool-introduction-page\n\n"
             );
             return false;
@@ -76,7 +75,7 @@ public class ArgParser {
         config.setContinueIfError(cmd.hasOption("ce"));
         config.setOnlyExported(cmd.hasOption("oe"));
         config.setRunApksInDescOrder(cmd.hasOption("rd"));
-        config.setSeed(cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : new Date().getTime());
+        config.setSeed(cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : System.currentTimeMillis());
         config.setDeviceSerial(cmd.getOptionValue("d"));
 
         if (cmd.hasOption("mr")) {
@@ -92,6 +91,7 @@ public class ArgParser {
                 return false;
             }
         }
+        config.setAppendBoundaryValues(cmd.hasOption("ab"));
         config.setStartApkIndex(cmd.hasOption("ia") ? Integer.parseInt(cmd.getOptionValue("ia")) : 0);
         config.setStartCompIndex(cmd.hasOption("ic") ? Integer.parseInt(cmd.getOptionValue("ic")) : 0);
         config.setStartCaseIndex(cmd.hasOption("it") ? Integer.parseInt(cmd.getOptionValue("it")) : 0);
@@ -107,13 +107,15 @@ public class ArgParser {
                 Integer.parseInt(cmd.getOptionValue("smax")) :
                 Constants.DEFAULT_RAND_STR_MAX_LENGTH);
 
-        if (cmd.hasOption("ag")) config.setTestGenMode(TestGenMode.AUTO);
-        else if (cmd.hasOption("og")) config.setTestGenMode(TestGenMode.ONLY);
-        else config.setTestGenMode(TestGenMode.NONE);
-
-        if (cmd.hasOption("og")) {
+        if (cmd.hasOption("ag")) {
+            config.setTestGenMode(TestGenMode.AUTO);
+        } else if (cmd.hasOption("og")) {
             config.setTestGenMode(TestGenMode.ONLY);
         } else {
+            config.setTestGenMode(TestGenMode.NONE);
+        }
+
+        if (!cmd.hasOption("og")) {
             // To run test, check parameters
             if (!cmd.hasOption("a")) {
                 Log.error("ADB executable path cannot be empty");
@@ -132,8 +134,11 @@ public class ArgParser {
             }
             config.setAndroidLauncherPkgName(cmd.getOptionValue("ln"));
 
-            if (cmd.hasOption("ag")) config.setTestGenMode(TestGenMode.AUTO);
-            else config.setTestGenMode(TestGenMode.NONE);
+            if (cmd.hasOption("ag")) {
+                config.setTestGenMode(TestGenMode.AUTO);
+            } else {
+                config.setTestGenMode(TestGenMode.NONE);
+            }
         }
         return true;
     }
@@ -171,6 +176,8 @@ public class ArgParser {
                 "Run apks in desc order of path. If not specified, default is asc order");
         options.addOption("mr", "mist-result", true,
                 "Path to MIST result file (in JSON format). Default is null");
+        options.addOption("ab", "append-boundary-values", false,
+                "Whether append boundary values (NULL, EMPTY, 0, MIN, MAX, etc.). If not specified, default is false");
 
         options.addOption("smin", "str-min-length", true,
                 "Min length of the random string. Default=" + Constants.DEFAULT_RAND_STR_MIN_LENGTH);

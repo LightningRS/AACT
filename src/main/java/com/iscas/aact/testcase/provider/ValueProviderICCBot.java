@@ -13,7 +13,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Slf4j
-public class ValueProviderICCBot extends ValueProvider {
+public class ValueProviderICCBot extends BaseValueProvider {
     private final JSONObject fullValueSet;
     private final ScopeConfigUtil scopeCfg;
 
@@ -68,7 +68,7 @@ public class ValueProviderICCBot extends ValueProvider {
                     }
                     if (!"host".equals(realDataFieldName) && !"port".equals(realDataFieldName)) {
                         mergedValueSetObj.put(realDataFieldName, mergedValues);
-                }
+                    }
                 }
 
                 Set<String> combAuths = new HashSet<>();

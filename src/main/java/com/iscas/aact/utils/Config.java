@@ -29,6 +29,7 @@ public class Config {
     private Boolean continueIfError;
     private Boolean onlyExported;
     private Boolean runApksInDescOrder;
+    private Boolean appendBoundaryValues;
 
     private Integer startApkIndex;
     private Integer startCompIndex;

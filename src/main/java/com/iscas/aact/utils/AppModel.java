@@ -28,17 +28,50 @@ import java.util.TreeMap;
 public class AppModel {
     private static final Logger Log = LoggerFactory.getLogger(AppModel.class);
     private final Path apkPath;
-    private final ApkMeta apkMeta;
-    private final Document apkManifest;
-    private final JSONObject appModelJson;
-    private final String pkgName;
-    private final String modelVersion;
-    private final SortedMap<String, JSONObject> componentsJsonMap;
-    private final List<JSONObject> componentsJsonList;
+    private ApkMeta apkMeta;
+    private Document apkManifest;
+    private JSONObject appModelJson;
+    private JSONObject paramSummaryJson;
+    private String pkgName;
+    private String modelVersion;
+    private SortedMap<String, JSONObject> componentsJsonMap;
+    private List<JSONObject> componentsJsonList;
 
-    public AppModel(Path apkPath) throws IOException, SAXException, ParserConfigurationException {
+    public AppModel(Path apkPath) throws Exception {
         this.apkPath = apkPath;
+        loadApk();
+        loadICCBotModel();
+        log.info("Loaded APP [{}], with {} components in ICCBot component model", pkgName, getCompCount());
+    }
 
+    public AppModel(JSONObject appModelJson) {
+        this.appModelJson = appModelJson;
+        apkPath = null;
+        apkMeta = null;
+        apkManifest = null;
+        paramSummaryJson = null;
+        pkgName = appModelJson.getString("package");
+        modelVersion = appModelJson.getString("version");
+        loadComponents();
+        log.info("Loaded APP [{}], with {} components in ICCBot component model", pkgName, getCompCount());
+    }
+
+    private void loadApk() throws IOException, ParserConfigurationException, SAXException {
+        // Load APK
+        try (ApkFile apkFile = new ApkFile(apkPath.toFile())) {
+            apkMeta = apkFile.getApkMeta();
+            if (pkgName != null && !pkgName.equals(apkMeta.getPackageName())) {
+                throw new RuntimeException("APK package name not equals to component model package name!");
+            } else {
+                pkgName = apkMeta.getPackageName();
+            }
+            DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
+            apkManifest = docBuilder.parse(new InputSource(new StringReader(apkFile.getManifestXml())));
+        }
+    }
+
+    private void loadICCBotModel() throws IOException {
         // Load ICCBot component model
         String apkFileName = apkPath.getFileName().toString();
         String apkFileBaseName = apkFileName.substring(0, apkFileName.lastIndexOf("."));
@@ -46,22 +79,22 @@ public class AppModel {
                 Config.getInstance().getIccResultPath().toString(),
                 apkFileBaseName + "/ICCSpecification/ComponentModel.json");
         appModelJson = JSON.parseObject(Files.readString(appModelJsonPath));
-
-        // Load APK
-        try (ApkFile apkFile = new ApkFile(apkPath.toFile())) {
-            apkMeta = apkFile.getApkMeta();
-            pkgName = apkMeta.getPackageName();
-            if (!pkgName.equals(appModelJson.getString("package"))) {
-                throw new RuntimeException("APK package name not equals to component model package name!");
-            }
-
-            DocumentBuilderFactory docBuilderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder docBuilder = docBuilderFactory.newDocumentBuilder();
-            apkManifest = docBuilder.parse(new InputSource(new StringReader(apkFile.getManifestXml())));
-        }
-
-        // Parse ICCBot component model
         modelVersion = appModelJson.getString("version");
+
+        // Load ICCBot param summary (optional)
+        Path paramSummaryJsonPath = Paths.get(
+                Config.getInstance().getIccResultPath().toString(),
+                apkFileBaseName + "/ICCSpecification/paramSummary.json");
+        if (Files.exists(paramSummaryJsonPath) && Files.isReadable(paramSummaryJsonPath)) {
+            paramSummaryJson = JSON.parseObject(Files.readString(paramSummaryJsonPath));
+            log.info("ICCBot param summary is available!");
+        } else {
+            paramSummaryJson = null;
+        }
+        loadComponents();
+    }
+
+    private void loadComponents() {
         componentsJsonMap = new TreeMap<>();
         JSONArray compJsonArr = appModelJson.getJSONArray("components");
         if (compJsonArr == null) {
@@ -74,7 +107,14 @@ public class AppModel {
         }
         componentsJsonList = componentsJsonMap.values().stream().toList();
 
-        log.info("Loaded APK [{}], with {} components in ICCBot component model", apkFileName, getCompCount());
+        JSONObject mistResult = Config.getInstance().getMISTResult();
+        if (mistResult != null && !mistResult.containsKey(getPackageName())) {
+            log.debug("Package [{}] is not in MIST result", getPackageName());
+        }
+    }
+
+    public JSONObject getParamSummaryJson() {
+        return paramSummaryJson;
     }
 
     public List<String> getAllCompNames() {
@@ -98,7 +138,7 @@ public class AppModel {
         if (compJson == null) {
             return null;
         }
-        CompModel compModel = new CompModel(pkgName, compJson);
+        CompModel compModel = new CompModel(this, compJson);
         ApkManifestUtils.checkCompEnabled(compModel, apkManifest);
         ApkManifestUtils.checkCompExported(compModel, apkManifest);
         MISTUtils.checkCompMISTType(compModel);
