@@ -1,5 +1,6 @@
 package com.iscas.aact.utils;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.Data;
 
 import java.nio.file.Path;
@@ -33,6 +34,8 @@ public class Config {
     private Integer startCompIndex;
     private Integer startCaseIndex;
     private String startStrategy;
+
+    private JSONObject MISTResult;
 
     private Config() {
 

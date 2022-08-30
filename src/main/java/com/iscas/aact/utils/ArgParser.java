@@ -1,10 +1,12 @@
 package com.iscas.aact.utils;
 
+import com.alibaba.fastjson.JSON;
 import com.iscas.aact.Constants;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -76,6 +78,20 @@ public class ArgParser {
         config.setRunApksInDescOrder(cmd.hasOption("rd"));
         config.setSeed(cmd.hasOption("s") ? Long.parseLong(cmd.getOptionValue("s")) : new Date().getTime());
         config.setDeviceSerial(cmd.getOptionValue("d"));
+
+        if (cmd.hasOption("mr")) {
+            Path mistResultPath = Paths.get(cmd.getOptionValue("mr")).toAbsolutePath();
+            if (!Files.isRegularFile(mistResultPath) || !Files.isReadable(mistResultPath)) {
+                Log.error("Invalid MIST result path: {}", mistResultPath);
+                return false;
+            }
+            try {
+                config.setMISTResult(JSON.parseObject(Files.readString(mistResultPath)));
+            } catch (IOException e) {
+                Log.error("Failed to load MIST result: {}", mistResultPath);
+                return false;
+            }
+        }
         config.setStartApkIndex(cmd.hasOption("ia") ? Integer.parseInt(cmd.getOptionValue("ia")) : 0);
         config.setStartCompIndex(cmd.hasOption("ic") ? Integer.parseInt(cmd.getOptionValue("ic")) : 0);
         config.setStartCaseIndex(cmd.hasOption("it") ? Integer.parseInt(cmd.getOptionValue("it")) : 0);
@@ -153,6 +169,8 @@ public class ArgParser {
                 "Test exported component only. If not specified, default is false");
         options.addOption("rd", "run-in-desc-order", false,
                 "Run apks in desc order of path. If not specified, default is asc order");
+        options.addOption("mr", "mist-result", true,
+                "Path to MIST result file (in JSON format). Default is null");
 
         options.addOption("smin", "str-min-length", true,
                 "Min length of the random string. Default=" + Constants.DEFAULT_RAND_STR_MIN_LENGTH);
