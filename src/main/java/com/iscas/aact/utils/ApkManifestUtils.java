@@ -33,6 +33,7 @@ public class ApkManifestUtils {
             return null;
         }
     }
+
     public static void checkCompExported(CompModel compModel, org.w3c.dom.Document apkManifest) {
         boolean isExported = false;
         Node compNode = findCompNode(apkManifest, compModel.getPackageName(), compModel.getClassName());

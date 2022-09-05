@@ -4,9 +4,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.utils.CompModel;
-import com.iscas.aact.utils.Config;
 import com.iscas.aact.utils.ICCBotUtils;
-import javassist.util.HotSwapAgent;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 

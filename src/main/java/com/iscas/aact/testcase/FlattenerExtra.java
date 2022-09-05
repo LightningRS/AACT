@@ -111,7 +111,7 @@ public class FlattenerExtra extends BaseFlattener {
         nodeId++;
         int thisNodeId = nodeId;
         String extraName = extraObj.getString("name");
-        String extraType = extraObj.getString("type").replaceAll("java\\.lang\\.", "");;
+        String extraType = extraObj.getString("type").replaceAll("java\\.lang\\.", "");
         String extraNodeName = "extra_" + parentId + "_" + nodeId + "_" + encodeExtraNameAndType(extraName, extraType);
         Set<String> fValues = new HashSet<>();
         JSONArray bodyObj = extraObj.getJSONArray("body");

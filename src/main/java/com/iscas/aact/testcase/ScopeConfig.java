@@ -47,7 +47,7 @@ public class ScopeConfig {
 
     public void replaceFieldConfig(String fieldName, Boolean value) {
         if (mFieldToScopeMap.containsKey(fieldName)) {
-            for (Map.Entry<String, Boolean> entry: mFieldToScopeMap.get(fieldName).entrySet()) {
+            for (Map.Entry<String, Boolean> entry : mFieldToScopeMap.get(fieldName).entrySet()) {
                 entry.setValue(value);
             }
         }
