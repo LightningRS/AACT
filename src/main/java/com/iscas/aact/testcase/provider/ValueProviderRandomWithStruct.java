@@ -37,6 +37,7 @@ public class ValueProviderRandomWithStruct extends BaseValueProvider {
         this.strMaxLength = strMaxLength;
     }
 
+    @Override
     public JSONObject getValueSet() {
         this.random = GlobalRandom.getInstance();
         if (fullValueSet == null) {

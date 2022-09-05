@@ -6,9 +6,8 @@ import com.iscas.aact.logcat.interfaces.ILogcatHandler;
 import com.iscas.aact.logcat.interfaces.ILogcatParser;
 import com.iscas.aact.logcat.utils.LogInfo;
 import com.iscas.aact.utils.SortedArrayList;
+import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Set;
@@ -17,9 +16,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class LogcatMonitor {
-    private static final Logger Log = LoggerFactory.getLogger(LogcatMonitor.class);
-
     private final TestController mTestController;
     private final BlockingQueue<String> mLogQueue;
     private final LogcatProxier mLogcatProxier;
@@ -49,15 +47,15 @@ public class LogcatMonitor {
         Set<Class<?>> classes = ref.getTypesAnnotatedWith(LogcatHandler.class);
         for (Class<?> clazz : classes) {
             if (!ILogcatHandler.class.isAssignableFrom(clazz)) {
-                Log.error("Handler [{}] is not implements ILogcatHandler", clazz.getName());
+                log.error("Handler [{}] is not implements ILogcatHandler", clazz.getName());
                 return;
             }
             LogcatHandler handlerConfig = clazz.getAnnotation(LogcatHandler.class);
             try {
                 mHandlerList.add((ILogcatHandler) clazz.getDeclaredConstructor().newInstance());
-                Log.debug("Registered logcat handler [{}]", handlerConfig.name());
+                log.debug("Registered logcat handler [{}]", handlerConfig.name());
             } catch (ReflectiveOperationException e) {
-                Log.error("Cannot construct handler on class [{}]", clazz.getName(), e);
+                log.error("Cannot construct handler on class [{}]", clazz.getName(), e);
             }
         }
         Collections.reverse(mHandlerList);
@@ -112,7 +110,7 @@ public class LogcatMonitor {
         while (true) {
             try {
                 String logLine = mLogQueue.take();
-                Log.debug("logLine: {}", logLine);
+                log.debug("logLine: {}", logLine);
                 LogInfo res = this.mLogcatParser.parse(logLine);
                 if (res != null) {
                     for (ILogcatHandler handler : mHandlerList) {
@@ -139,6 +137,6 @@ public class LogcatMonitor {
         };
         handleThread.setDaemon(true);
         handleThread.start();
-        Log.info("Logcat handle thread start");
+        log.info("Logcat handle thread start");
     }
 }

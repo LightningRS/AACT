@@ -7,8 +7,6 @@ import org.apache.commons.text.RandomStringGenerator;
 import java.util.Random;
 
 public class RandomExtraDataGenerator {
-    private static final Random random = GlobalRandom.getInstance();
-
     public static String generate(String extraType) {
         return generate(extraType, Constants.DEFAULT_RAND_STR_MIN_LENGTH, Constants.DEFAULT_RAND_STR_MAX_LENGTH);
     }

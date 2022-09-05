@@ -1,16 +1,15 @@
 package com.iscas.aact.logcat;
 
 import com.iscas.aact.utils.ADBInterface;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Queue;
 
+@Slf4j
 public class LogcatProxier {
-    protected static final Logger Log = LoggerFactory.getLogger(LogcatProxier.class);
     protected Queue<String> mLogQueue;
     protected String mVerbosity;
 
@@ -29,7 +28,7 @@ public class LogcatProxier {
                 this.mLogQueue.offer(s);
             }
         } catch (IOException e) {
-            Log.error("IOException when reading logcat", e);
+            log.error("IOException when reading logcat", e);
         }
         // Restart LogcatProxyThread
         this.start();
@@ -44,6 +43,6 @@ public class LogcatProxier {
         };
         proxyThread.setDaemon(true);
         proxyThread.start();
-        Log.info("Logcat proxy thread started");
+        log.info("Logcat proxy thread started");
     }
 }

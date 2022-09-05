@@ -5,8 +5,6 @@ import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.utils.Config;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -15,7 +13,6 @@ import java.util.Set;
 
 @Slf4j
 public class FlattenerExtra extends BaseFlattener {
-    private static final Logger Log = LoggerFactory.getLogger(FlattenerExtra.class);
     private static int nodeId;
 
     @Override
@@ -121,7 +118,7 @@ public class FlattenerExtra extends BaseFlattener {
             if (values != null) {
                 for (String value : values.toJavaList(String.class)) {
                     if (value.equals(Constants.VAL_NOT_EMPTY)) {
-                        Log.debug("Detected notEmpty value");
+                        log.debug("Detected notEmpty value");
                     } else if ("boolean".equalsIgnoreCase(extraType)) {
                         fValues.add(String.valueOf(Boolean.valueOf(value)));
                     } else {

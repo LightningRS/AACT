@@ -12,16 +12,15 @@ import com.iscas.aact.rpc.handler.RunCaseRecvHandler;
 import com.iscas.aact.rpc.interfaces.IRPCHandler;
 import com.iscas.aact.utils.ADBInterface;
 import com.iscas.aact.utils.SortedArrayList;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+@Slf4j
 public class RPCController {
-    private static final Logger Log = LoggerFactory.getLogger(RPCController.class);
     private static final ADBInterface adb = ADBInterface.getInstance();
     private static final int MAX_RETRY = 3;
     private final TestController mTestController;
@@ -109,9 +108,9 @@ public class RPCController {
             dataObj.put("seq", ++mSeq);
             String data = dataObj.toJSONString();
             mDos.writeUTF(data);
-            Log.debug("Socket send: {}", data);
+            log.debug("Socket send: {}", data);
         } catch (IOException e) {
-            Log.error("IOException when sending rpc data", e);
+            log.error("IOException when sending rpc data", e);
             disconnect(true);
         }
     }
@@ -125,11 +124,11 @@ public class RPCController {
         try {
             while (mDis != null) {
                 String data = mDis.readUTF();
-                Log.debug("Socket recv: {}", data);
+                log.debug("Socket recv: {}", data);
                 this.handle(data);
             }
         } catch (IOException e) {
-            Log.error("IOException when receiving data from socket", e);
+            log.error("IOException when receiving data from socket", e);
             disconnect(true);
         }
     }
@@ -149,14 +148,14 @@ public class RPCController {
             recvThread.setDaemon(true);
             recvThread.start();
             mRetryCnt = 0;
-            Log.info("Connected to RPC on port {}", mForwardPort);
+            log.info("Connected to RPC on port {}", mForwardPort);
 
             // Send init message
             JSONObject dataObj = new JSONObject();
             dataObj.put("action", IRPCHandler.ACTION_INIT);
             this.send(dataObj, new InitRecvHandler());
         } catch (IOException e) {
-            Log.error("Failed to connect to remote rpc on port {}", mForwardPort);
+            log.error("Failed to connect to remote rpc on port {}", mForwardPort);
         }
     }
 
@@ -187,11 +186,11 @@ public class RPCController {
         mSoc = null;
         if (isRetry && mRetryCnt < MAX_RETRY) {
             mRetryCnt++;
-            Log.error("Disconnected from RPC unexpectedly, reconnect after 3 seconds...");
+            log.error("Disconnected from RPC unexpectedly, reconnect after 3 seconds...");
             try {
                 Thread.sleep(3000);
             } catch (InterruptedException e) {
-                Log.error("InterruptedException when reconnecting", e);
+                log.error("InterruptedException when reconnecting", e);
             }
             // Restart test bridge
             adb.forceStopApp(Constants.CLIENT_PKG_NAME);
@@ -210,7 +209,7 @@ public class RPCController {
         try {
             JSONObject dataObj = (JSONObject) JSON.parse(recvData);
             if (!dataObj.containsKey("code") || !dataObj.containsKey("seq")) {
-                Log.error("Invalid received data: {}", dataObj.toJSONString());
+                log.error("Invalid received data: {}", dataObj.toJSONString());
                 this.disconnect(true);
             }
 
@@ -218,7 +217,7 @@ public class RPCController {
             int rSeq = dataObj.getIntValue("seq");
             if (rSeq != mSeq) {
                 // Sequence number not match, reconnect
-                Log.error("Invalid received seq! rSeq={}, mSeq={}", rSeq, mSeq);
+                log.error("Invalid received seq! rSeq={}, mSeq={}", rSeq, mSeq);
                 this.disconnect(true);
             }
 
@@ -228,14 +227,14 @@ public class RPCController {
                 try {
                     handler.handle(this, dataObj);
                 } catch (Exception e) {
-                    Log.error("Exception when calling rpc handler [{}]", handlerInfo.name(), e);
+                    log.error("Exception when calling rpc handler [{}]", handlerInfo.name(), e);
                 }
                 if (handlerInfo.autoRemove()) {
                     mSeqHandlerList.remove(handler);
                 }
             }
         } catch (JSONException e) {
-            Log.error("JSONException when parsing received data", e);
+            log.error("JSONException when parsing received data", e);
         }
     }
 
@@ -269,7 +268,7 @@ public class RPCController {
 
     public void reloadTestcase() {
         if (mLoadCaseCommand == null) {
-            Log.error("Cannot reload testcases! Missing mLoadCaseCommand");
+            log.error("Cannot reload testcases! Missing mLoadCaseCommand");
             return;
         }
         send(mLoadCaseCommand, new LoadRecvHandler());

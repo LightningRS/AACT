@@ -220,7 +220,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             boolean isUseActAndExt = isUseActionAndExtra();
             int numOfPath = getNumOfPath();
             if (isUseActAndExt) {
-                log.info("Default Relation: Use Action and extra");
+                log.info("Default Relation: Use action and extra");
                 sut.addDefaultRelation(2);
             } else if (numOfPath > Constants.NUM_OF_PATH_THRESHOLD) {
                 log.info("Default Relation: numOfPath > THRESHOLD");

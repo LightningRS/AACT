@@ -6,8 +6,6 @@ import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import net.dongliu.apk.parser.ApkFile;
 import net.dongliu.apk.parser.bean.ApkMeta;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -26,7 +24,6 @@ import java.util.TreeMap;
 
 @Slf4j
 public class AppModel {
-    private static final Logger Log = LoggerFactory.getLogger(AppModel.class);
     private final Path apkPath;
     private ApkMeta apkMeta;
     private Document apkManifest;
@@ -98,7 +95,7 @@ public class AppModel {
         componentsJsonMap = new TreeMap<>();
         JSONArray compJsonArr = appModelJson.getJSONArray("components");
         if (compJsonArr == null) {
-            Log.warn("[components] field not found in component model, package=" + pkgName + ", version=" + modelVersion);
+            log.warn("[components] field not found in component model, package=" + pkgName + ", version=" + modelVersion);
         } else {
             List<JSONObject> compArr = compJsonArr.toJavaList(JSONObject.class);
             for (JSONObject comp : compArr) {

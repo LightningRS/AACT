@@ -12,14 +12,14 @@ import java.util.regex.Pattern;
 @Slf4j
 @LogcatHandler(name = "ActivityDisplayedHandler", regex = "I/ActivityManager: Displayed", priority = 1)
 public class ActivityDisplayedHandler implements ILogcatHandler {
+    private static final Pattern PATTERN = Pattern.compile("Displayed (?<compName>[^:]+): (?<startDelay>.*)");
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
         if (logInfo.msg == null) {
             return;
         }
-        Pattern pattern = Pattern.compile("Displayed (?<compName>[^:]+): (?<startDelay>.*)");
-        Matcher matcher = pattern.matcher(logInfo.msg);
-        if (!matcher.find() || !(matcher.groupCount() == 2)) {
+        Matcher matcher = PATTERN.matcher(logInfo.msg);
+        if (!matcher.find() || matcher.groupCount() != 2) {
             log.error("Activity displayed log pattern match failed: " + logInfo.msg);
             return;
         }

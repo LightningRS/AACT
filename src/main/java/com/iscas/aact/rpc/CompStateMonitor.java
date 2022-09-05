@@ -84,7 +84,7 @@ public class CompStateMonitor {
     }
 
     public void start() {
-        this.startedAt = new Date().getTime();
+        this.startedAt = System.currentTimeMillis();
         this.displayedAt = null;
         this.compState = STATE_UNK;
         log.info("Started component state monitor for compoent [" + compName + "]");
@@ -99,19 +99,19 @@ public class CompStateMonitor {
     }
 
     private void checkOnce() {
-        long st = new Date().getTime();
+        long st = System.currentTimeMillis();
         // logcat is checking by ActivityDisplayedHandler
         // Check current focused activity
         checkByDumpSys();
         // Check timeout
         checkTimeout();
-        while (new Date().getTime() - st < Constants.COMP_CHECK_INTERVAL) {
+        while (System.currentTimeMillis() - st < Constants.COMP_CHECK_INTERVAL) {
             Thread.yield();
         }
     }
 
     private void checkTimeout() {
-        Long currTime = new Date().getTime();
+        Long currTime = System.currentTimeMillis();
         if (currTime - startedAt > Constants.TIMEOUT_START_MS && compState < STATE_DISPLAYED) {
             log.warn("Component [{}] start timeout", compName);
             compState = STATE_TIMEOUT;
@@ -143,7 +143,7 @@ public class CompStateMonitor {
         String currCompName = matcher.group("compName");
         focusedActivity = currCompName;
         if (compName.equals(currCompName)) {
-            long nowTime = new Date().getTime();
+            long nowTime = System.currentTimeMillis();
             if (displayedAt != null) {
                 if (nowTime - displayedAt >= Constants.TIME_DISPLAY_REQUIRE_MS) {
                     compState = STATE_SUCCESS;
@@ -183,7 +183,7 @@ public class CompStateMonitor {
             return;
         }
         compState = STATE_DISPLAYED;
-        displayedAt = new Date().getTime();
+        displayedAt = System.currentTimeMillis();
         log.info("Activity displayed! Waiting for TIME_DISPLAY_REQUIRE");
     }
 

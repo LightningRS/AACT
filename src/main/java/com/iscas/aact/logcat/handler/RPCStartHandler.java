@@ -4,29 +4,27 @@ import com.iscas.aact.logcat.LogcatMonitor;
 import com.iscas.aact.logcat.annotations.LogcatHandler;
 import com.iscas.aact.logcat.interfaces.ILogcatHandler;
 import com.iscas.aact.logcat.utils.LogInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Slf4j
 @LogcatHandler(name = "RPCStartHandler", keywords = {"Test RPCServer started at port"})
 public class RPCStartHandler implements ILogcatHandler {
-    private static final Logger Log = LoggerFactory.getLogger(RPCStartHandler.class);
-
+    private static final Pattern PATTERN = Pattern.compile("Test RPCServer started at port (?<port>\\d+)");
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
         if (logInfo.msg == null) {
             return;
         }
-        Pattern pattern = Pattern.compile("Test RPCServer started at port (?<port>\\d+)");
-        Matcher matcher = pattern.matcher(logInfo.msg);
+        Matcher matcher = PATTERN.matcher(logInfo.msg);
         if (!matcher.find()) {
-            Log.error("Failed to match rpc remote port! logInfo.msg: {}", logInfo.msg);
+            log.error("Failed to match rpc remote port! logInfo.msg: {}", logInfo.msg);
             return;
         }
         Integer port = Integer.parseInt(matcher.group("port"));
-        Log.info("Detected rpc remote port {}", port);
+        log.info("Detected rpc remote port {}", port);
         monitor.getTestController().initRPC(port);
     }
 }

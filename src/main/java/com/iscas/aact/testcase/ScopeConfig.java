@@ -2,8 +2,7 @@ package com.iscas.aact.testcase;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -13,8 +12,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 public class ScopeConfig {
-    private static final Logger Log = LoggerFactory.getLogger(ScopeConfig.class);
     protected final Map<String, Map<String, Boolean>> mFieldToScopeMap;
 
     public ScopeConfig() {
@@ -80,7 +79,7 @@ public class ScopeConfig {
                 }
             }
         } catch (IOException | CsvValidationException e) {
-            Log.error("Failed to read scope config csv file [{}]", pathOrContent, e);
+            log.error("Failed to read scope config csv file [{}]", pathOrContent, e);
         }
     }
 }
