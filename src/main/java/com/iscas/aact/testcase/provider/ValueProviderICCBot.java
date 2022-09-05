@@ -6,14 +6,19 @@ import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.testcase.ScopeConfig;
 import com.iscas.aact.utils.CompModel;
+import com.iscas.aact.utils.Config;
 import com.iscas.aact.utils.ICCBotUtils;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 @Slf4j
 public class ValueProviderICCBot extends BaseValueProvider {
+    private static Set<String> IGNORE_VALUES = new HashSet<>() {{
+        addAll(Arrays.asList("mHost", "mPort", "mPath", "mSheme", "mScheme", "mAuthority"));
+    }};
     private final JSONObject fullValueSet;
     private final ScopeConfig scopeCfg;
 
@@ -25,12 +30,21 @@ public class ValueProviderICCBot extends BaseValueProvider {
         this.scopeCfg = new ScopeConfig(scopeCfg);
     }
 
-    protected void updateScopeCfgByMIST() {
+    protected void updateCompScopeCfg() {
+        if (Config.getInstance().getScopeConfigPath() != null) {
+            // User defined scope config, ignore updating
+            log.info("updateCompScopeCfg: User-defined scope config detected, ignore updating scope config!");
+            return;
+        }
         if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
-            log.info("MIST result of component [{}/{}] is mustIA, only consider send/recv scope",
+            log.info("updateCompScopeCfg: [{}/{}] is mustIA according to MIST, only consider values in send/recv scope",
                     getPackageName(), getCompName());
             scopeCfg.replaceScopeConfig("manifest", false);
-            scopeCfg.replaceScopeConfig("specIntent", false);
+        } else if (Config.getInstance().getWithManifest()) {
+            log.info("updateCompScopeCfg: Append manifest scope values (exclude category)");
+            scopeCfg.replaceScopeConfig("manifest", true);
+            // Exclude category
+            scopeCfg.setFieldScopeConfig("category", "manifest", false);
         }
     }
 
@@ -40,7 +54,7 @@ public class ValueProviderICCBot extends BaseValueProvider {
             return null;
         }
         JSONObject mergedValueSetObj = new JSONObject();
-        updateScopeCfgByMIST();
+        updateCompScopeCfg();
         JSONObject fullValueSetDup = JSON.parseObject(fullValueSet.toJSONString());
         for (String fieldName : fullValueSetDup.keySet()) {
             String realFieldName = ICCBotUtils.getRealFieldName(fieldName);
@@ -49,6 +63,7 @@ public class ValueProviderICCBot extends BaseValueProvider {
             if ("data".equals(realFieldName)) {
                 Set<String> hostsTemp = new HashSet<>();
                 Set<String> portsTemp = new HashSet<>();
+                Set<String> authorityTemp = new HashSet<>();
                 for (String dataFieldName : fieldValues.keySet()) {
                     JSONObject dataFieldValues = fieldValues.getJSONObject(dataFieldName);
                     String realDataFieldName = ICCBotUtils.getRealFieldName(dataFieldName);
@@ -57,49 +72,36 @@ public class ValueProviderICCBot extends BaseValueProvider {
                         if (!scopeCfg.getScopeConfig("data", scopeName)) {
                             continue;
                         }
-
                         if ("host".equals(realDataFieldName)) {
-                            hostsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class));
+                            hostsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class)
+                                    .stream().filter(v -> !v.isBlank() && !IGNORE_VALUES.contains(v)).distinct().toList());
                         } else if ("port".equals(realDataFieldName)) {
-                            portsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class));
+                            portsTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class)
+                                    .stream().filter(v -> !v.isBlank() && !IGNORE_VALUES.contains(v)).distinct().toList());
+                        } else if ("authority".equals(realDataFieldName)) {
+                            authorityTemp.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class)
+                                    .stream().filter(v -> !v.isBlank() && !IGNORE_VALUES.contains(v)).distinct().toList());
                         } else {
-                            mergeCompJSONArrRecur(mergedValues, dataFieldValues.getJSONArray(scopeName));
+                            mergedValues.addAll(dataFieldValues.getJSONArray(scopeName).toJavaList(String.class)
+                                    .stream().filter(v -> !v.isBlank() && !IGNORE_VALUES.contains(v)).distinct().toList());
                         }
                     }
-                    if (!"host".equals(realDataFieldName) && !"port".equals(realDataFieldName)) {
+                    if (!"host".equals(realDataFieldName)
+                            && !"port".equals(realDataFieldName)
+                            && !"authority".equals(realDataFieldName)) {
                         mergedValueSetObj.put(realDataFieldName, mergedValues);
                     }
                 }
-
-                Set<String> combAuths = new HashSet<>();
-                if (hostsTemp.size() > 0) {
-                    hostsTemp.forEach(h -> {
-                        if (!h.isBlank()) {
-                            combAuths.add(h);
-                            if (portsTemp.size() > 0) {
-                                portsTemp.forEach(p -> {
-                                    if (!"".equals(p.trim())) {
-                                        combAuths.add(h + ":" + p);
-                                    }
-                                });
-                            }
-                        }
-                    });
-                } else if (portsTemp.size() > 0) {
-                    portsTemp.forEach(p -> {
-                        if (!p.trim().isBlank()) {
-                            combAuths.add(p);
-                        }
-                    });
+                for (String host : hostsTemp) {
+                    for (String port : portsTemp) {
+                        authorityTemp.add(String.format("%s:%s", host, port));
+                    }
                 }
-                JSONArray newAuthorityArr = new JSONArray();
-                JSONArray oldAuthorityArr = mergedValueSetObj.getJSONArray("authority");
-                if (oldAuthorityArr == null) {
-                    oldAuthorityArr = new JSONArray();
-                    mergedValueSetObj.put("authority", oldAuthorityArr);
-                }
-                newAuthorityArr.addAll(combAuths);
-                mergeCompJSONArrRecur(oldAuthorityArr, newAuthorityArr);
+                authorityTemp.addAll(hostsTemp);
+                authorityTemp.addAll(portsTemp);
+                JSONArray authorityArr = new JSONArray();
+                authorityArr.addAll(authorityTemp);
+                mergedValueSetObj.put("authority", authorityArr);
             } else {
                 JSONArray mergedValues = new JSONArray();
                 for (String scopeName : fieldValues.keySet()) {

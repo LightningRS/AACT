@@ -170,7 +170,13 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         sut.addConstraint(dataConReverse2);
 
         // Relation between basic fields
-        Relation rAllFields = new Relation(2);
+        Relation rAllFields = new Relation();
+        if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+            log.info("MIST result is mustIA, set basic fields strength to 1");
+            rAllFields.setStrength(1);
+        } else {
+            rAllFields.setStrength(2);
+        }
         rAllFields.addParam(sut.getParam("action"));
         rAllFields.addParam(sut.getParam("category"));
         rAllFields.addParam(sut.getParam("data"));
@@ -239,7 +245,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             sut.addDefaultRelation(defaultS);
         }
 
-        log.info("Generated SUT:\n{}", sut);
+        log.info("Generated SUT:\n{}", getSUTString());
 
         // Generate
         TestGenProfile profile = TestGenProfile.instance();
@@ -307,6 +313,66 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    protected String getSUTString() {
+        StringBuilder res = new StringBuilder();
+        res.append("System Under Test:\n");
+        res.append("===========================================\n");
+        res.append("Name: ").append(sut.getName()).append("\n");
+        res.append("Number of Params: ").append(sut.getNumOfParams()).append("\n");
+        res.append("\nParameters: \n");
+        for (Parameter parameter : sut.getParameters()) {
+            res.append(getParameterString(parameter));
+        }
+        res.append("\nRelations: \n");
+        for (Relation relation : sut.getRelations()) {
+            res.append(relation);
+        }
+        res.append("\nConstraints: \n");
+
+        for (Constraint constraint : sut.getConstraintManager().getConstraints()) {
+            res.append(constraint);
+        }
+        return res.toString();
+    }
+
+    protected static String getParameterString(Parameter parameter) {
+        StringBuilder res = new StringBuilder();
+        String paramName = parameter.getName();
+        if (paramName.startsWith("category_")) {
+            paramName += " (" + BaseFlattener.b32decode(paramName.replace("category_", "")) + ")";
+        } else if (paramName.startsWith("extra_")) {
+            String[] sp = paramName.split("_");
+            paramName += " (" + BaseFlattener.b32decode(sp[4]) + " " + BaseFlattener.b32decode(sp[3]) + ")";
+        }
+        res.append(paramName).append(": [");
+        List<String> values = new ArrayList<>(parameter.getValues());
+        values.sort((s1, s2) -> {
+            if (Constants.VAL_NULL.equals(s1)) {
+                return -1;
+            }
+            if (Constants.VAL_NULL.equals(s2)) {
+                return 1;
+            }
+            if (Constants.VAL_EMPTY.equals(s1)) {
+                return -1;
+            }
+            if (Constants.VAL_EMPTY.equals(s2)) {
+                return 1;
+            }
+            return s2.compareTo(s1);
+        });
+        values.addAll(parameter.getInvalidValues());
+        for (int i = 0; i < values.size(); i++) {
+            String value = values.get(i);
+            if (!value.startsWith("$#") || !value.endsWith("#$")) {
+                values.set(i, "\"" + value + "\"");
+            }
+        }
+        res.append(String.join(", ", values));
+        res.append("]\n");
+        return res.toString();
     }
 
     private JSONArray getCompParamSummaryJson() {

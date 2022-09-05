@@ -61,6 +61,25 @@ public class FlattenerExtra extends BaseFlattener {
         return encodeExtraNameAndType(name, type);
     }
 
+    private static void appendNullAndEmpty(Set<String> fValues, String extraType) {
+        if ("boolean".equalsIgnoreCase(extraType)) {
+            fValues.add("true");
+            fValues.add("false");
+        } else if ("char".equalsIgnoreCase(extraType)
+                || "byte".equalsIgnoreCase(extraType)
+                || "short".equalsIgnoreCase(extraType)
+                || "int".equalsIgnoreCase(extraType)
+                || "long".equalsIgnoreCase(extraType)
+                || "float".equalsIgnoreCase(extraType)
+                || "double".equalsIgnoreCase(extraType)) {
+            fValues.add("0");
+            fValues.add("1");
+        } else {
+            fValues.add(Constants.VAL_NULL);
+            fValues.add(Constants.VAL_EMPTY);
+        }
+    }
+
     private static void appendBoundaryValues(Set<String> fValues, String extraType) {
         switch (extraType.toLowerCase()) {
             case "boolean" -> fValues.addAll(Arrays.asList("true", "false"));
@@ -98,9 +117,7 @@ public class FlattenerExtra extends BaseFlattener {
                     String.valueOf(Double.MIN_VALUE),
                     "0"
             ));
-            default -> fValues.addAll(Arrays.asList(
-                    Constants.VAL_NULL, Constants.VAL_EMPTY
-            ));
+            default -> {}
         }
     }
 
@@ -117,18 +134,17 @@ public class FlattenerExtra extends BaseFlattener {
             JSONArray values = extraObj.getJSONArray("values");
             if (values != null) {
                 for (String value : values.toJavaList(String.class)) {
-                    if (value.equals(Constants.VAL_NOT_EMPTY)) {
-                        log.debug("Detected notEmpty value");
-                    } else if ("boolean".equalsIgnoreCase(extraType)) {
-                        fValues.add(String.valueOf(Boolean.valueOf(value)));
+                    if ("boolean".equalsIgnoreCase(extraType)) {
+                        fValues.add("1".equals(value) ? "true" : "false");
+                    } else if (Constants.PRIMITIVE_TYPES.contains(extraType) && value.startsWith("new ")) {
+                        log.debug("new primitive type detected in value set, ignored");
                     } else {
                         fValues.add(value);
                     }
                 }
-                if (Config.getInstance().getAppendBoundaryValues()) {
-                    appendBoundaryValues(fValues, extraType);
-                }
-            } else {
+            }
+            appendNullAndEmpty(fValues, extraType);
+            if (Config.getInstance().getWithPresetAndBoundary()) {
                 appendBoundaryValues(fValues, extraType);
             }
             valueSet.put(extraNodeName, fValues);

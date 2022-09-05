@@ -12,5 +12,9 @@ public abstract class BaseFlattener {
         return BASE32.encodeToString(str.getBytes(StandardCharsets.UTF_8)).replaceAll("=", "");
     }
 
+    protected static String b32decode(String str) {
+        return new String(BASE32.decode(str), StandardCharsets.UTF_8);
+    }
+
     public abstract int flatten(JSONObject jsonObj);
 }

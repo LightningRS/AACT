@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.utils.CompModel;
+import com.iscas.aact.utils.Config;
 import com.iscas.aact.utils.ICCBotUtils;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +34,9 @@ public class ValueProviderPreset extends BaseValueProvider {
      **/
     @Override
     public JSONObject getValueSet() {
+        if (!Config.getInstance().getWithPresetAndBoundary()) {
+            return null;
+        }
         JSONObject res = new JSONObject();
 
         JSONArray categoryArr = new JSONArray();

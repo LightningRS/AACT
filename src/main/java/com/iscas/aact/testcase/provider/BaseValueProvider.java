@@ -100,8 +100,9 @@ public abstract class BaseValueProvider {
             // Other types (including JSONArray)
             for (Object objToMerge : src) {
                 if (objToMerge instanceof String) {
-                    if (Constants.VAL_NOT_EMPTY.equals(objToMerge)) {
+                    if ("notEmpty".equals(objToMerge)) {
                         log.debug("Detected notEmpty value");
+                        merged.add(Constants.VAL_NOT_EMPTY);
                     } else if (!merged.contains(objToMerge)) {
                         merged.add(objToMerge);
                     }

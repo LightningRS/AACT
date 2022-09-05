@@ -29,13 +29,18 @@ public class Config {
     private Boolean continueIfError;
     private Boolean onlyExported;
     private Boolean runApksInDescOrder;
-    private Boolean appendBoundaryValues;
 
     private Integer startApkIndex;
     private Integer startCompIndex;
     private Integer startCaseIndex;
     private String startStrategy;
     private int defaultStrength;
+
+    // ========= Value Provider Options =========
+
+    private Boolean withManifest;
+    private Boolean withRandom;
+    private Boolean withPresetAndBoundary;
 
     private JSONObject MISTResult;
 

@@ -1,5 +1,9 @@
 package com.iscas.aact;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public class Constants {
     public static final String CLIENT_PKG_NAME = "com.test.apptestclient";
     public static final String CLIENT_ACT_NAME = CLIENT_PKG_NAME + ".activities.MainActivity";
@@ -27,13 +31,13 @@ public class Constants {
     public static final int NUM_OF_PATH_THRESHOLD = 2;
 
     public static final String DEFAULT_SCOPE_CONFIG = """
-            ,manifest,sendIntent,recvIntent,specIntent
-            action,1,1,1,1
-            category,0,1,1,1
-            data,1,1,1,1
-            extra,0,1,1,0
-            flag,0,1,1,1
-            type,1,1,1,1
+            ,manifest,sendIntent,recvIntent
+            action,0,1,1
+            category,0,1,1
+            data,0,1,1
+            extra,0,1,1
+            flag,0,1,1
+            type,0,1,1
             """;
 
     public static final String[] PRESET_VALUES_CATEGORY = {
@@ -80,4 +84,8 @@ public class Constants {
             "INVALID_PATH", "/", "/path", "/path?a=1", "/path/path"
             // "/", "/data", "/storage/emulated/0", "/sdcard"
     };
+
+    public static final Set<String> PRIMITIVE_TYPES = new HashSet<>() {{
+        addAll(Arrays.asList("boolean", "byte", "char", "short", "int", "long", "float", "double"));
+    }};
 }

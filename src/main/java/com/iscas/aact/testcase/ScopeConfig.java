@@ -49,14 +49,20 @@ public class ScopeConfig {
             for (Map.Entry<String, Boolean> entry : mFieldToScopeMap.get(fieldName).entrySet()) {
                 entry.setValue(value);
             }
+        } else {
+            log.error("Invalid fieldName: {}", fieldName);
+            throw new RuntimeException(String.format("Invalid fieldName: %s", fieldName));
         }
     }
 
-    public void replaceScopeConfig(String fieldName, Boolean value) {
+    public void replaceScopeConfig(String scopeName, Boolean value) {
         for (Map.Entry<String, Map<String, Boolean>> entry : mFieldToScopeMap.entrySet()) {
             Map<String, Boolean> fieldMap = entry.getValue();
-            if (fieldMap.containsKey(fieldName)) {
-                fieldMap.put(fieldName, value);
+            if (fieldMap.containsKey(scopeName)) {
+                fieldMap.put(scopeName, value);
+            } else {
+                log.error("Invalid scopeName: {}", scopeName);
+                throw new RuntimeException(String.format("Invalid scopeName: %s", scopeName));
             }
         }
     }

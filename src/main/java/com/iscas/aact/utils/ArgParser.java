@@ -90,7 +90,6 @@ public class ArgParser {
                 return false;
             }
         }
-        config.setAppendBoundaryValues(cmd.hasOption("ab"));
 
         int s = 0;
         if (cmd.hasOption("ss")) {
@@ -105,6 +104,10 @@ public class ArgParser {
             }
         }
         config.setDefaultStrength(s);
+
+        config.setWithManifest(cmd.hasOption("wm"));
+        config.setWithRandom(cmd.hasOption("wr"));
+        config.setWithPresetAndBoundary(cmd.hasOption("wp"));
 
         config.setStartApkIndex(cmd.hasOption("ia") ? Integer.parseInt(cmd.getOptionValue("ia")) : 0);
         config.setStartCompIndex(cmd.hasOption("ic") ? Integer.parseInt(cmd.getOptionValue("ic")) : 0);
@@ -190,10 +193,15 @@ public class ArgParser {
                 "Run apks in desc order of path. If not specified, default is asc order");
         options.addOption("mr", "mist-result", true,
                 "Path to MIST result file (in JSON format). Default is null");
-        options.addOption("ab", "append-boundary-values", false,
-                "Whether append boundary values (NULL, EMPTY, 0, MIN, MAX, etc.). If not specified, default is false");
         options.addOption("ss", "strength-strategy", true,
-                "Default comb-strength strategy (0 for dynamic, 1~6 for fixed");
+                "Default comb-strength strategy (0 for dynamic, 1~6 for fixed. Default is 0");
+
+        options.addOption("wm", "with-manifest-values", false,
+                "Append values from manifest scope of ICCBot result when generating SUT. Default is false");
+        options.addOption("wr", "with-random-values", false,
+                "Append random values when generating SUT. Default is false");
+        options.addOption("wp", "with-preset-values", false,
+                "Append preset and boundary values when generating SUT. Default is false");
 
         options.addOption("smin", "str-min-length", true,
                 "Min length of the random string. Default=" + Constants.DEFAULT_RAND_STR_MIN_LENGTH);
