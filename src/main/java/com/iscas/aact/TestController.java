@@ -7,7 +7,7 @@ import com.iscas.aact.rpc.CompStateMonitor;
 import com.iscas.aact.rpc.RPCController;
 import com.iscas.aact.testcase.ACTSTestcaseBuilder;
 import com.iscas.aact.testcase.BaseTestcaseBuilder;
-import com.iscas.aact.testcase.ScopeConfigUtil;
+import com.iscas.aact.testcase.ScopeConfig;
 import com.iscas.aact.testcase.provider.*;
 import com.iscas.aact.utils.*;
 import lombok.Getter;
@@ -41,7 +41,7 @@ public class TestController {
     private List<Path> apksPath;
     private AppModel currAppModel;
     private CompModel currCompModel;
-    private final ScopeConfigUtil scopeConfig;
+    private final ScopeConfig scopeConfig;
     private Integer currCompState = STATE_READY;
     private Integer currCaseCount = 0;
 
@@ -49,7 +49,7 @@ public class TestController {
         logcatMonitor = new LogcatMonitor(this);
         compStateMonitor = new CompStateMonitor(this);
         rpcController = null;
-        scopeConfig = new ScopeConfigUtil();
+        scopeConfig = new ScopeConfig();
         boolean hasPath = GlobalConfig.getScopeConfigPath() != null;
         scopeConfig.loadScopeConfig(
                 hasPath ? GlobalConfig.getScopeConfigPath().toString() : Constants.DEFAULT_SCOPE_CONFIG, hasPath

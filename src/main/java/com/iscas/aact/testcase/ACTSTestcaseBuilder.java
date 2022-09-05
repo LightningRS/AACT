@@ -23,10 +23,10 @@ import java.util.regex.Pattern;
 public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
     private final SUT sut;
     public ACTSTestcaseBuilder(CompModel compModel) {
-        this(compModel, new ScopeConfigUtil());
+        this(compModel, new ScopeConfig());
     }
 
-    public ACTSTestcaseBuilder(CompModel compModel, ScopeConfigUtil scopeConfig) {
+    public ACTSTestcaseBuilder(CompModel compModel, ScopeConfig scopeConfig) {
         super(compModel, scopeConfig);
         sut = new SUT(compModel.getClassName());
     }

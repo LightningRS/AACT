@@ -51,18 +51,18 @@ import java.util.List;
 public abstract class BaseTestcaseBuilder {
     private static final Config GlobalConfig = Config.getInstance();
     protected final CompModel compModel;
-    protected final ScopeConfigUtil scopeConfig;
+    protected final ScopeConfig scopeConfig;
     protected final JSONObject valueSet;
     protected boolean isValueSetModified = false;
     protected List<BaseValueProvider> valueProviders;
 
     public BaseTestcaseBuilder(CompModel compModel) {
-        this(compModel, new ScopeConfigUtil());
+        this(compModel, new ScopeConfig());
         boolean hasPath = GlobalConfig.getScopeConfigPath() != null;
         scopeConfig.loadScopeConfig(hasPath ? GlobalConfig.getScopeConfigPath().toString() : Constants.DEFAULT_SCOPE_CONFIG, hasPath);
     }
 
-    public BaseTestcaseBuilder(CompModel compModel, ScopeConfigUtil scopeConfig) {
+    public BaseTestcaseBuilder(CompModel compModel, ScopeConfig scopeConfig) {
         valueProviders = new ArrayList<>();
         this.compModel = compModel;
         this.scopeConfig = scopeConfig;
@@ -124,7 +124,7 @@ public abstract class BaseTestcaseBuilder {
         return new JSONObject(valueSet);
     }
 
-    public ScopeConfigUtil getScopeConfig() {
+    public ScopeConfig getScopeConfig() {
         return scopeConfig;
     }
 

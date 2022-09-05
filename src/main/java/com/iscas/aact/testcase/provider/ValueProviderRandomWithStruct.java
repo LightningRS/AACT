@@ -5,7 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.testcase.RandomExtraDataGenerator;
-import com.iscas.aact.testcase.ScopeConfigUtil;
+import com.iscas.aact.testcase.ScopeConfig;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.GlobalRandom;
 
@@ -13,20 +13,20 @@ import java.util.*;
 
 public class ValueProviderRandomWithStruct extends BaseValueProvider {
     private final JSONObject fullValueSet;
-    private final ScopeConfigUtil scopeCfg;
+    private final ScopeConfig scopeCfg;
     private final int cntPerField;
     private final int strMinLength;
     private final int strMaxLength;
     private Random random;
 
     public ValueProviderRandomWithStruct(CompModel compModel, JSONObject fullValueSet,
-                                         ScopeConfigUtil scopeCfg, int cntPerField) {
+                                         ScopeConfig scopeCfg, int cntPerField) {
         this(compModel, fullValueSet, scopeCfg, cntPerField,
                 Constants.DEFAULT_RAND_STR_MIN_LENGTH, Constants.DEFAULT_RAND_STR_MAX_LENGTH);
     }
 
     public ValueProviderRandomWithStruct(CompModel compModel, JSONObject fullValueSet,
-                                         ScopeConfigUtil scopeCfg, int cntPerField, int strMinLength, int strMaxLength) {
+                                         ScopeConfig scopeCfg, int cntPerField, int strMinLength, int strMaxLength) {
         super();
         this.name = "randomWithStruct";
         this.compModel = compModel;

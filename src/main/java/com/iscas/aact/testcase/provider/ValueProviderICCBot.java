@@ -4,7 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
-import com.iscas.aact.testcase.ScopeConfigUtil;
+import com.iscas.aact.testcase.ScopeConfig;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.ICCBotUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -15,14 +15,14 @@ import java.util.Set;
 @Slf4j
 public class ValueProviderICCBot extends BaseValueProvider {
     private final JSONObject fullValueSet;
-    private final ScopeConfigUtil scopeCfg;
+    private final ScopeConfig scopeCfg;
 
-    public ValueProviderICCBot(CompModel compModel, JSONObject fullValueSet, ScopeConfigUtil scopeCfg) {
+    public ValueProviderICCBot(CompModel compModel, JSONObject fullValueSet, ScopeConfig scopeCfg) {
         super();
         this.name = "iccBot";
         this.compModel = compModel;
         this.fullValueSet = fullValueSet;
-        this.scopeCfg = scopeCfg;
+        this.scopeCfg = new ScopeConfig(scopeCfg);
     }
 
     protected void updateScopeCfgByMIST() {

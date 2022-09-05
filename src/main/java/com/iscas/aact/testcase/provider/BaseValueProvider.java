@@ -46,10 +46,13 @@ public abstract class BaseValueProvider {
     }
 
     public static void mergeCompJSONArrRecur(@NotNull JSONArray merged, JSONArray src) {
-        if (src == null || src.size() == 0) {
+        if (src == null) {
             return;
         }
         src = filterEmptyStrInJsonArray(src);
+        if (src.size() == 0) {
+            return;
+        }
         if (merged.size() == 0) {
             merged.addAll(src);
             return;

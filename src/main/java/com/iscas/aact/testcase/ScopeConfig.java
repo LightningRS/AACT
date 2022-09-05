@@ -13,12 +13,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ScopeConfigUtil {
-    private static final Logger Log = LoggerFactory.getLogger(ScopeConfigUtil.class);
+public class ScopeConfig {
+    private static final Logger Log = LoggerFactory.getLogger(ScopeConfig.class);
     protected final Map<String, Map<String, Boolean>> mFieldToScopeMap;
 
-    public ScopeConfigUtil() {
+    public ScopeConfig() {
         mFieldToScopeMap = new HashMap<>();
+    }
+
+    public ScopeConfig(ScopeConfig config) {
+        this();
+        for (Map.Entry<String, Map<String, Boolean>> entry : config.mFieldToScopeMap.entrySet()) {
+            String fieldName = entry.getKey();
+            Map<String, Boolean> fieldMap = entry.getValue();
+            for (Map.Entry<String, Boolean> fieldEntry : fieldMap.entrySet()) {
+                this.setFieldScopeConfig(fieldName, fieldEntry.getKey(), fieldEntry.getValue());
+            }
+        }
     }
 
     public boolean getScopeConfig(String fieldName, String scopeName) {
@@ -29,7 +40,7 @@ public class ScopeConfigUtil {
         return scopeMap.get(scopeName);
     }
 
-    public void setFieldScopeConfig(String fieldName, String scopeName, Boolean value) {
+    public void setFieldScopeConfig(String fieldName, String scopeName, boolean value) {
         Map<String, Boolean> scopeMap = mFieldToScopeMap.computeIfAbsent(fieldName, k -> new HashMap<>());
         scopeMap.put(scopeName, value);
     }
