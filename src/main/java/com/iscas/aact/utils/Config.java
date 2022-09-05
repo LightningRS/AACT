@@ -35,6 +35,7 @@ public class Config {
     private Integer startCompIndex;
     private Integer startCaseIndex;
     private String startStrategy;
+    private int defaultStrength;
 
     private JSONObject MISTResult;
 

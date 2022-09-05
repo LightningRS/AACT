@@ -2,17 +2,16 @@ package com.iscas.aact.utils;
 
 import com.alibaba.fastjson.JSON;
 import com.iscas.aact.Constants;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.cli.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+@Slf4j
 public class ArgParser {
-    private static final Logger Log = LoggerFactory.getLogger(ArgParser.class);
     private static final Options OPTIONS = getOptions();
 
     public static boolean parse(String[] args) {
@@ -20,7 +19,7 @@ public class ArgParser {
         try {
             cmd = new DefaultParser().parse(OPTIONS, args);
         } catch (ParseException e) {
-            Log.error("Invalid options: {}", e.getMessage());
+            log.error("Invalid options: {}", e.getMessage());
             HelpFormatter formatter = new HelpFormatter();
             formatter.setOptionComparator(null);
             System.out.print("\n");
@@ -39,7 +38,7 @@ public class ArgParser {
 
         Path apkPath = Paths.get(cmd.getOptionValue("k")).toAbsolutePath();
         if (!Files.isReadable(apkPath)) {
-            Log.error("APK path is not readable: {}", apkPath);
+            log.error("APK path is not readable: {}", apkPath);
             return false;
         }
         config.setApkPath(apkPath);
@@ -47,14 +46,14 @@ public class ArgParser {
 
         Path iccResultPath = Paths.get(cmd.getOptionValue("i")).toAbsolutePath();
         if (!Files.isDirectory(iccResultPath) || !Files.isReadable(iccResultPath)) {
-            Log.error("Invalid ICCBot result path: {}", iccResultPath);
+            log.error("Invalid ICCBot result path: {}", iccResultPath);
             return false;
         }
         config.setIccResultPath(iccResultPath);
 
         Path testcasePath = Paths.get(cmd.getOptionValue("c")).toAbsolutePath();
         if (!Files.isDirectory(testcasePath) || !Files.isReadable(testcasePath)) {
-            Log.error("Invalid testcase directory: {}", testcasePath);
+            log.error("Invalid testcase directory: {}", testcasePath);
             return false;
         }
         config.setTestcasePath(testcasePath);
@@ -66,7 +65,7 @@ public class ArgParser {
         if (cmd.hasOption("o")) {
             Path scopeConfigPath = Paths.get(cmd.getOptionValue("o")).toAbsolutePath();
             if (!Files.isRegularFile(scopeConfigPath) || !Files.isReadable(scopeConfigPath)) {
-                Log.error("Invalid scope config file: {}", scopeConfigPath);
+                log.error("Invalid scope config file: {}", scopeConfigPath);
                 return false;
             }
             config.setScopeConfigPath(scopeConfigPath);
@@ -81,17 +80,32 @@ public class ArgParser {
         if (cmd.hasOption("mr")) {
             Path mistResultPath = Paths.get(cmd.getOptionValue("mr")).toAbsolutePath();
             if (!Files.isRegularFile(mistResultPath) || !Files.isReadable(mistResultPath)) {
-                Log.error("Invalid MIST result path: {}", mistResultPath);
+                log.error("Invalid MIST result path: {}", mistResultPath);
                 return false;
             }
             try {
                 config.setMISTResult(JSON.parseObject(Files.readString(mistResultPath)));
             } catch (IOException e) {
-                Log.error("Failed to load MIST result: {}", mistResultPath);
+                log.error("Failed to load MIST result: {}", mistResultPath);
                 return false;
             }
         }
         config.setAppendBoundaryValues(cmd.hasOption("ab"));
+
+        int s = 0;
+        if (cmd.hasOption("ss")) {
+            String ss = cmd.getOptionValue("ss");
+            try {
+                s = Integer.parseInt(ss);
+                if (s < 0 || s > 6) {
+                    throw new NumberFormatException("Strength can only be in [0, 6]");
+                }
+            } catch (NumberFormatException e) {
+                log.warn("Invalid strength strategy [{}], use 0 (dynamic) instead", ss, e);
+            }
+        }
+        config.setDefaultStrength(s);
+
         config.setStartApkIndex(cmd.hasOption("ia") ? Integer.parseInt(cmd.getOptionValue("ia")) : 0);
         config.setStartCompIndex(cmd.hasOption("ic") ? Integer.parseInt(cmd.getOptionValue("ic")) : 0);
         config.setStartCaseIndex(cmd.hasOption("it") ? Integer.parseInt(cmd.getOptionValue("it")) : 0);
@@ -118,18 +132,18 @@ public class ArgParser {
         if (!cmd.hasOption("og")) {
             // To run test, check parameters
             if (!cmd.hasOption("a")) {
-                Log.error("ADB executable path cannot be empty");
+                log.error("ADB executable path cannot be empty");
                 return false;
             }
             Path adbPath = Paths.get(cmd.getOptionValue("a")).toAbsolutePath();
             if (!Files.isExecutable(adbPath)) {
-                Log.error("ADB is not executable: {}", adbPath);
+                log.error("ADB is not executable: {}", adbPath);
                 return false;
             }
             config.setAdbPath(adbPath);
 
             if (!cmd.hasOption("ln")) {
-                Log.error("Android launcher package name cannot be empty");
+                log.error("Android launcher package name cannot be empty");
                 return false;
             }
             config.setAndroidLauncherPkgName(cmd.getOptionValue("ln"));
@@ -178,6 +192,8 @@ public class ArgParser {
                 "Path to MIST result file (in JSON format). Default is null");
         options.addOption("ab", "append-boundary-values", false,
                 "Whether append boundary values (NULL, EMPTY, 0, MIN, MAX, etc.). If not specified, default is false");
+        options.addOption("ss", "strength-strategy", true,
+                "Default comb-strength strategy (0 for dynamic, 1~6 for fixed");
 
         options.addOption("smin", "str-min-length", true,
                 "Min length of the random string. Default=" + Constants.DEFAULT_RAND_STR_MIN_LENGTH);

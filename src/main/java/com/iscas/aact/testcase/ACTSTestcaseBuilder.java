@@ -22,6 +22,7 @@ import java.util.regex.Pattern;
 @Slf4j
 public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
     private final SUT sut;
+
     public ACTSTestcaseBuilder(CompModel compModel) {
         this(compModel, new ScopeConfig());
     }
@@ -208,14 +209,37 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         // Optimize strength by param summary
         updateRelationByParamSummary();
 
-        log.info("Generated SUT:\n{}", sut);
-
-        if (Config.getInstance().getMISTResult() != null &&
-                Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
-            sut.addDefaultRelation(1);
+        // Strategy for default relation:
+        // if useAction and useExtra => t = 2
+        // else if numOfPath > threshold (2) => t = 2
+        // else t = 1 (mustIA, numOfPath = 0, etc.)
+        int defaultS = Config.getInstance().getDefaultStrength();
+        if (defaultS == 0) {
+            boolean hasMISTResult = Config.getInstance().getMISTResult() != null;
+            boolean hasParamSummary = getCompParamSummaryJson() != null;
+            boolean isUseActAndExt = isUseActionAndExtra();
+            int numOfPath = getNumOfPath();
+            if (isUseActAndExt) {
+                log.info("Default Relation: Use Action and extra");
+                sut.addDefaultRelation(2);
+            } else if (numOfPath > Constants.NUM_OF_PATH_THRESHOLD) {
+                log.info("Default Relation: numOfPath > THRESHOLD");
+                sut.addDefaultRelation(2);
+            } else {
+                if (hasMISTResult && Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+                    log.info("Default Relation: MIST result is mustIA");
+                }
+                if (hasParamSummary && numOfPath == 0) {
+                    log.info("Default Relation: numOfPath = 0");
+                }
+                sut.addDefaultRelation(1);
+            }
         } else {
-            sut.addDefaultRelation(2);
+            log.info("Default Relation: Fixed {}", defaultS);
+            sut.addDefaultRelation(defaultS);
         }
+
+        log.info("Generated SUT:\n{}", sut);
 
         // Generate
         TestGenProfile profile = TestGenProfile.instance();
@@ -285,14 +309,50 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         }
     }
 
-    private void updateRelationByParamSummary() {
+    private JSONArray getCompParamSummaryJson() {
         JSONObject paramSummary = compModel.getAppModel().getParamSummaryJson();
         if (paramSummary == null) {
-            return;
+            return null;
         }
-
         // 获取当前组件的 paramSummary 列表
-        JSONArray compParamSummary = paramSummary.getJSONArray(compModel.getClassName());
+        return paramSummary.getJSONArray(compModel.getClassName());
+    }
+
+    private int getNumOfPath() {
+        JSONArray compParamSummary = getCompParamSummaryJson();
+        if (compParamSummary == null) {
+            return 0;
+        }
+        return compParamSummary.size();
+    }
+
+    private boolean isUseActionAndExtra() {
+        JSONArray compParamSummary = getCompParamSummaryJson();
+        if (compParamSummary == null) {
+            return false;
+        }
+        for (Object pathSummaryObj : compParamSummary) {
+            boolean hasAction = false;
+            boolean hasExtra = false;
+            // 获取当前路径下的所有参数名称
+            List<String> pathParams = ((JSONObject) pathSummaryObj).getJSONArray("params").toJavaList(String.class);
+            for (String param : pathParams) {
+                if ("action".equals(param)) {
+                    hasAction = true;
+                } else if (param.contains("-")) {
+                    hasExtra = true;
+                }
+            }
+            if (hasAction && hasExtra) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void updateRelationByParamSummary() {
+        // 获取当前组件的 paramSummary 列表
+        JSONArray compParamSummary = getCompParamSummaryJson();
         if (compParamSummary == null) {
             return;
         }
@@ -303,8 +363,6 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         List<Map<String, Parameter>> paramGroups = new ArrayList<>();
 
         for (Object pathSummaryObj : compParamSummary) {
-            Map<String, Parameter> paramMap = new HashMap<>();
-
             // 获取当前路径下的所有参数名称
             JSONArray pathParams = ((JSONObject) pathSummaryObj).getJSONArray("params");
 
@@ -312,6 +370,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             if (pathParams == null || pathParams.size() < 3) {
                 continue;
             }
+
+            Map<String, Parameter> paramMap = new HashMap<>(pathParams.size());
 
             // 将 JSONArray 转换为 List<String>，遍历参数列表
             pathParams.toJavaList(String.class).stream().filter(Predicate.not(String::isEmpty))

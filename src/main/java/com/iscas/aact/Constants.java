@@ -24,6 +24,7 @@ public class Constants {
     public static final int DEFAULT_RAND_STR_MIN_LENGTH = 1;
     public static final int DEFAULT_RAND_STR_MAX_LENGTH = 20;
     public static final int CASE_MAX_RETRY = 3;
+    public static final int NUM_OF_PATH_THRESHOLD = 2;
 
     public static final String DEFAULT_SCOPE_CONFIG = """
             ,manifest,sendIntent,recvIntent,specIntent
