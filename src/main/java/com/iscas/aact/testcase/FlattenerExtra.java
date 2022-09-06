@@ -136,8 +136,8 @@ public class FlattenerExtra extends BaseFlattener {
                 for (String value : values.toJavaList(String.class)) {
                     if ("boolean".equalsIgnoreCase(extraType)) {
                         fValues.add("1".equals(value) ? "true" : "false");
-                    } else if (Constants.PRIMITIVE_TYPES.contains(extraType) && value.startsWith("new ")) {
-                        log.debug("new primitive type detected in value set, ignored");
+                    } else if (value.startsWith("new ")) {
+                        log.debug("new (constructor) detected in value set, ignored");
                     } else {
                         fValues.add(value);
                     }
