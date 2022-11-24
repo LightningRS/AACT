@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 @LogcatHandler(name = "ActivityDisplayedHandler", regex = "I/ActivityManager: Displayed", priority = 1)
 public class ActivityDisplayedHandler implements ILogcatHandler {
     private static final Pattern PATTERN = Pattern.compile("Displayed (?<compName>[^:]+): (?<startDelay>.*)");
+
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
         if (logInfo.msg == null) {

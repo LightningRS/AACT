@@ -154,7 +154,8 @@ public class ValueProviderPreset extends BaseValueProvider {
             } else {
                 log.warn("No preset value got for field {}", dataFieldName);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return null;
     }
 }

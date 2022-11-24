@@ -330,7 +330,8 @@ public class TestController {
                         // Waiting for consuming all trace blocks
                         try {
                             Thread.sleep(1000);
-                        } catch (InterruptedException ignored) {}
+                        } catch (InterruptedException ignored) {
+                        }
                         StackTraceHandler stHandler = logcatMonitor.getHandlerByClass(StackTraceHandler.class);
                         TraceBlock mergedTraceBlock = new TraceBlock();
                         while (stHandler.hasTraceBlock()) {

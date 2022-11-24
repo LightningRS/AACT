@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
 @LogcatHandler(name = "RPCStartHandler", keywords = {"Test RPCServer started at port"})
 public class RPCStartHandler implements ILogcatHandler {
     private static final Pattern PATTERN = Pattern.compile("Test RPCServer started at port (?<port>\\d+)");
+
     @Override
     public void handle(LogcatMonitor monitor, LogInfo logInfo) {
         if (logInfo.msg == null) {
