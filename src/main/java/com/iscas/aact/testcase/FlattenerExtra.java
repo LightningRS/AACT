@@ -19,6 +19,7 @@ public class FlattenerExtra extends BaseFlattener {
     public int flatten(JSONObject valueSet) {
         JSONArray extraArr = valueSet.getJSONArray("extra");
         JSONArray extraBaseValues = new JSONArray();
+        extraBaseValues.add(Constants.VAL_NULL);
         extraBaseValues.add(Constants.VAL_EMPTY);
         if (extraArr == null) {
             valueSet.put("extra", extraBaseValues);
@@ -117,7 +118,8 @@ public class FlattenerExtra extends BaseFlattener {
                     String.valueOf(Double.MIN_VALUE),
                     "0"
             ));
-            default -> {}
+            default -> {
+            }
         }
     }
 
