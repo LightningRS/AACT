@@ -26,6 +26,10 @@ public abstract class BaseValueProvider {
         return compModel.getClassName();
     }
 
+    /**
+     * 获取生成的取值集合
+     * @return 取值集合
+     */
     public abstract JSONObject getValueSet();
 
     public static JSONArray filterEmptyStrInJsonArray(@NotNull JSONArray jsonArray) {
@@ -52,18 +56,16 @@ public abstract class BaseValueProvider {
         if (src.size() == 0) {
             return;
         }
-        if (merged.size() == 0) {
-            merged.addAll(src);
-            return;
+        Type srcType = src.get(0).getClass();
+        if (merged.size() > 0) {
+            Type mergedType = merged.get(0).getClass();
+            if (!mergedType.equals(srcType)) {
+                throw new IllegalArgumentException(String.format(
+                        "Cannot merge JSONArray<%s> to JSONArray<%s>", srcType, mergedType
+                ));
+            }
         }
-        Type mergedType = merged.get(0).getClass();
-        if (!mergedType.equals(src.get(0).getClass())) {
-            throw new IllegalArgumentException(String.format(
-                    "Cannot merge JSONArray<%s> to JSONArray<%s>",
-                    src.get(0).getClass().getName(), mergedType.getTypeName()
-            ));
-        }
-        if (JSONObject.class.equals(mergedType)) {
+        if (JSONObject.class.equals(srcType)) {
             // Check name first
             for (JSONObject srcObj : src.toJavaList(JSONObject.class)) {
                 boolean flag = false;
