@@ -85,21 +85,21 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         // Build constraints for extra
         if (extraParams.size() > 0) {
             List<String> extraConStrNull = new ArrayList<>();
-            List<String> extraConStrNotNull = new ArrayList<>();
+            // List<String> extraConStrNotNull = new ArrayList<>();
             // Build condition statement
-            extraParams.forEach(c -> extraConStrNull.add(c.getName() + " = \"" + Constants.VAL_NULL + "\""));
-            extraParams.forEach(c -> extraConStrNotNull.add(c.getName() + " != \"" + Constants.VAL_NULL + "\""));
+            extraParams.forEach(c -> extraConStrNull.add(c.getName() + " = \"" + c.getValue(0) + "\""));
+            // extraParams.forEach(c -> extraConStrNotNull.add(c.getName() + " == \"" + Constants.VAL_NULL + "\""));
             // Append category itself
             ArrayList<Parameter> extraParamsWithExtra = new ArrayList<>(extraParams);
             extraParamsWithExtra.add(sut.getParam("extra"));
             // Build forward constraint
-            Constraint extraConForward = new Constraint("extra = \"" + Constants.VAL_NULL + "\" || extra == \"" +
-                    Constants.VAL_EMPTY + "\" => " + String.join(" && ", extraConStrNull), extraParamsWithExtra);
+            Constraint extraConForward = new Constraint("extra = \"" + Constants.VAL_EMPTY
+                    + "\" => " + String.join(" && ", extraConStrNull), extraParamsWithExtra);
             sut.addConstraint(extraConForward);
             // Build reverse constraint
-            Constraint extraConReverse = new Constraint(String.join(" || ", extraConStrNotNull) + " => " +
-                    "extra = \"" + Constants.VAL_NOT_EMPTY + "\"", extraParamsWithExtra);
-            sut.addConstraint(extraConReverse);
+            // Constraint extraConReverse = new Constraint(String.join(" || ", extraConStrNotNull) + " => "
+            //         + "extra = \"" + Constants.VAL_NOT_EMPTY + "\"", extraParamsWithExtra);
+            // sut.addConstraint(extraConReverse);
 
             // Build constraints for bundles
             for (Parameter extraParam : extraParams) {
@@ -169,13 +169,20 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         sut.addConstraint(dataConReverse1);
         sut.addConstraint(dataConReverse2);
 
+        // Default strength
+        int defaultS = Config.getInstance().getDefaultStrength();
+
         // Relation between basic fields
         Relation rAllFields = new Relation();
-        if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
-            log.info("MIST result is mustIA, set basic fields strength to 1");
-            rAllFields.setStrength(1);
+        if (defaultS != 0) {
+            rAllFields.setStrength(defaultS);
         } else {
-            rAllFields.setStrength(2);
+            if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+                log.info("MIST result is mustIA, set basic fields strength to 1");
+                rAllFields.setStrength(1);
+            } else {
+                rAllFields.setStrength(2);
+            }
         }
         rAllFields.addParam(sut.getParam("action"));
         rAllFields.addParam(sut.getParam("category"));
@@ -186,13 +193,17 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
 
         // Relation between flattened categories
         if (catParams.size() > 1) {
-            Relation rCategory;
-            if (compModel.hasFieldScopeValues("sendIntent", "category")
-                    || compModel.hasFieldScopeValues("recvIntent", "category")) {
-                log.debug("Category has been used in send/recv scope, set strength to 2");
-                rCategory = new Relation(2);
+            Relation rCategory = new Relation();
+            if (defaultS != 0) {
+                rCategory.setStrength(defaultS);
             } else {
-                rCategory = new Relation(1);
+                if (compModel.hasFieldScopeValues("sendIntent", "category")
+                        || compModel.hasFieldScopeValues("recvIntent", "category")) {
+                    log.debug("Category has been used in send/recv scope, set strength to 2");
+                    rCategory.setStrength(2);
+                } else {
+                    rCategory.setStrength(1);
+                }
             }
             catParams.forEach(rCategory::addParam);
             addRelation(rCategory);
@@ -200,26 +211,27 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
 
         // Relation between extra
         if (extraParams.size() > 1) {
-            Relation rExtra = new Relation(2);
+            Relation rExtra = new Relation();
+            rExtra.setStrength(defaultS == 0 ? 2 : defaultS);
             extraParams.forEach(rExtra::addParam);
             addRelation(rExtra);
         }
 
         // Relation between data
-        Relation rData = new Relation(2);
+        Relation rData = new Relation();
+        rData.setStrength(defaultS == 0 ? 2 : defaultS);
         rData.addParam(sut.getParam("scheme"));
         rData.addParam(sut.getParam("authority"));
         rData.addParam(sut.getParam("path"));
         addRelation(rData);
 
         // Optimize strength by param summary
-        updateRelationByParamSummary();
+        updateRelationByParamSummary(defaultS);
 
         // Strategy for default relation:
         // if useAction and useExtra => t = 2
         // else if numOfPath > threshold (2) => t = 2
         // else t = 1 (mustIA, numOfPath = 0, etc.)
-        int defaultS = Config.getInstance().getDefaultStrength();
         if (defaultS == 0) {
             boolean hasMISTResult = Config.getInstance().getMISTResult() != null;
             boolean hasParamSummary = getCompParamSummaryJson() != null;
@@ -250,7 +262,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         // Generate
         TestGenProfile profile = TestGenProfile.instance();
         profile.setIgnoreConstraints(false);
-        profile.setConstraintMode(TestGenProfile.ConstraintMode.solver);
+        profile.setConstraintMode(TestGenProfile.ConstraintMode.forbiddentuples);
         IpoEngine engine = new IpoEngine(sut);
         engine.build();
         TestSet ts = engine.getTestSet();
@@ -416,7 +428,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         return false;
     }
 
-    private void updateRelationByParamSummary() {
+    private void updateRelationByParamSummary(int defaultS) {
         // 获取当前组件的 paramSummary 列表
         JSONArray compParamSummary = getCompParamSummaryJson();
         if (compParamSummary == null) {
@@ -529,7 +541,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 Map<String, Parameter> paramGroup = paramGroups.get(i);
                 log.info("Add relation by param summary: ({})",
                         String.join(", ", paramGroup.keySet().stream().sorted().toList()));
-                Relation r = new Relation(3);
+                Relation r = new Relation();
+                r.setStrength(defaultS == 0 ? 3 : defaultS);
                 paramGroup.values().forEach(r::addParam);
                 addRelation(r);
             }
