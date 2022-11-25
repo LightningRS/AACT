@@ -36,6 +36,9 @@ public class CompStateMonitor {
     private Integer compState = STATE_UNK;
     private Long startedAt;
     private Long displayedAt;
+    private int jumpCnt;
+    private int launcherCnt;
+    private boolean isStarted = false;
 
     public CompStateMonitor(TestController testController) {
         this.testController = testController;
@@ -85,6 +88,9 @@ public class CompStateMonitor {
     public void start() {
         this.startedAt = System.currentTimeMillis();
         this.displayedAt = null;
+        this.jumpCnt = 0;
+        this.launcherCnt = 0;
+        this.isStarted = false;
         this.compState = STATE_UNK;
         log.info("Started component state monitor for compoent [" + compName + "]");
         new Thread("CompStateMonitor") {
@@ -112,14 +118,19 @@ public class CompStateMonitor {
     private void checkTimeout() {
         Long currTime = System.currentTimeMillis();
         if (currTime - startedAt > Constants.TIMEOUT_START_MS && compState < STATE_DISPLAYED) {
-            log.warn("Component [{}] start timeout", compName);
-            compState = STATE_TIMEOUT;
+            if (!isStarted) {
+                log.warn("Component [{}] start timeout", compName);
+                compState = STATE_TIMEOUT;
+            } else {
+                log.info("Component [{}] exited normally", compName);
+                compState = STATE_SUCCESS;
+            }
         }
     }
 
     private void checkByDumpSys() {
         String dumpSysType = switch (this.compType) {
-            case CompModel.TYPE_ACTIVITY -> "activity";
+            case CompModel.TYPE_ACTIVITY -> "window windows";
             case CompModel.TYPE_SERVICE -> "service";
             default -> null;
         };
@@ -132,16 +143,54 @@ public class CompStateMonitor {
             log.warn("Call dumpsys failed");
             return;
         }
-        Pattern pattern = Pattern.compile("mFocusedActivity: (?<type>[^{]+)\\{(?<id>\\S+)\\s" +
-                "(?<user>\\S+)\\s(?<compName>\\S+)\\s(?<tName>[^}]+)");
-        Matcher matcher = pattern.matcher(res);
-        if (!matcher.find() || !(matcher.groupCount() == 5)) {
-            log.debug("No mFocusedActivity detected in dumpsys result");
+        String focusName = null;
+        Pattern mCurrFocusPattern = Pattern.compile(
+                "(?m)^\\s*mCurrentFocus=(?<type>[^{]+)\\{(?<id>\\S+)\\s+" +
+                        "(?<user>\\S+)\\s+(?<compName>[^}]+)}$"
+        );
+        Matcher currFocusMatcher = mCurrFocusPattern.matcher(res);
+        Pattern focusedAppPattern = Pattern.compile(
+                "(?m)^\\s*mFocusedApp=(?<tokenType>[^{]+)\\{(?<outTokenId>\\S+)\\s+" +
+                        "token=Token\\{(?<tokenId>\\S+)\\s+(?<recordType>[^{]+)\\{" +
+                        "(?<recordId>\\S+)\\s+(?<user>\\S+)\\s+(?<compName>\\S+)\\s+(?<tName>[^}]+)}}}$"
+        );
+        Matcher focusedAppMatcher = focusedAppPattern.matcher(res);
+        Pattern mLastClosingPattern = Pattern.compile(
+                "(?m)^\\s*mLastClosingApp=(?<tokenType>[^{]+)\\{(?<outTokenId>\\S+)\\s+" +
+                        "token=Token\\{(?<tokenId>\\S+)\\s+(?<recordType>[^{]+)\\{" +
+                        "(?<recordId>\\S+)\\s+(?<user>\\S+)\\s+(?<compName>\\S+)\\s+(?<tName>[^}]+)}}}$"
+        );
+        Matcher lastClosingMatcher = mLastClosingPattern.matcher(res);
+
+        if (currFocusMatcher.find()) {
+            String currFocusCompName = currFocusMatcher.group("compName");
+            if (currFocusCompName.startsWith("Application Error")) {
+                if (!currFocusCompName.contains(pkgName)) {
+                    log.warn("Application Error that not belongs to target app detected! name={}", currFocusCompName);
+                }
+                compState = STATE_APP_CRASHED;
+                focusedActivity = currFocusCompName;
+                return;
+            } else if (currFocusCompName.contains("/")) {
+                String[] focusNames = currFocusCompName.split("/");
+                focusName = focusNames[0] + "/" + focusNames[1].replace(focusNames[0], "");
+            } else {
+                log.warn("Unrecognized component name format of mCurrentFocus: {}", currFocusCompName);
+                if ("DeprecatedTargetSdkVersionDialog".equals(currFocusCompName)) {
+                    adb.shellSync("input keyevent 66");
+                    adb.shellSync("input keyevent 66");
+                }
+            }
+        }
+        if (focusName == null && focusedAppMatcher.find()) {
+            focusName = focusedAppMatcher.group("compName");
+        }
+        if (focusName == null) {
+            log.error("mCurrentFocus/mFocusedApp not detected in dumpsys result");
             return;
         }
-        String currCompName = matcher.group("compName");
-        focusedActivity = currCompName;
-        if (compName.equals(currCompName)) {
+        focusedActivity = focusName;
+        if (compName.equals(focusedActivity)) {
             long nowTime = System.currentTimeMillis();
             if (displayedAt != null) {
                 if (nowTime - displayedAt >= Constants.TIME_DISPLAY_REQUIRE_MS) {
@@ -150,13 +199,27 @@ public class CompStateMonitor {
             } else {
                 displayedAt = nowTime;
             }
-        } else if (currCompName.contains(GlobalConfig.getAndroidLauncherPkgName())) {
-            // JUMPED to launcher, identify as crash
-            compState = STATE_APP_CRASHED;
-        } else if (!currCompName.equals(Constants.CLIENT_COMP_NAME)) {
+        } else if (focusedActivity.contains(GlobalConfig.getAndroidLauncherPkgName())) {
+            launcherCnt++;
+            if (launcherCnt > 3 && !isStarted) {
+                // JUMPED to launcher, identify as crash
+                compState = STATE_APP_CRASHED;
+            }
+        } else if (!focusedActivity.equals(Constants.CLIENT_COMP_NAME)) {
             // mFocusedActivity is neither component nor test client.
             // It may indicate that the component is redirected to another one.
-            compState = STATE_JUMPED;
+            jumpCnt++;
+            if (jumpCnt > 3) {
+                compState = STATE_JUMPED;
+            }
+        }
+
+        // Detect mLastClosingApp
+        if (lastClosingMatcher.find()) {
+            String lastClosingCompName = lastClosingMatcher.group("compName");
+            if (lastClosingCompName.equals(compName) || lastClosingCompName.contains(pkgName)) {
+                isStarted = true;
+            }
         }
     }
 
