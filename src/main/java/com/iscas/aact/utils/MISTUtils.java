@@ -19,7 +19,6 @@ public class MISTUtils {
             // MIST result is not specified, ignore
             return;
         }
-        boolean isExported = compModel.getExported() != null && compModel.getExported();
         if (!mistResult.containsKey(compModel.getPackageName())) {
             return;
         }
@@ -29,5 +28,18 @@ public class MISTUtils {
             return;
         }
         compModel.setMistType(pkgResult.getString(compModel.getClassName()));
+    }
+
+    public static boolean isDataUsed(CompModel compModel) {
+        return compModel.hasFieldScopeValues("sendIntent", "data", "scheme")
+                || compModel.hasFieldScopeValues("recvIntent", "data", "scheme")
+                || compModel.hasFieldScopeValues("sendIntent", "data", "host")
+                || compModel.hasFieldScopeValues("recvIntent", "data", "host")
+                || compModel.hasFieldScopeValues("sendIntent", "data", "port")
+                || compModel.hasFieldScopeValues("recvIntent", "data", "port")
+                || compModel.hasFieldScopeValues("sendIntent", "data", "authority")
+                || compModel.hasFieldScopeValues("recvIntent", "data", "authority")
+                || compModel.hasFieldScopeValues("sendIntent", "data", "path")
+                || compModel.hasFieldScopeValues("recvIntent", "data", "path");
     }
 }

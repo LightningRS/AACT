@@ -6,6 +6,7 @@ import com.iscas.aact.Constants;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
 import com.iscas.aact.utils.ICCBotUtils;
+import com.iscas.aact.utils.MISTUtils;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
@@ -57,16 +58,7 @@ public class ValueProviderPreset extends BaseValueProvider {
         }
         res.put("type", typeArr);
 
-        boolean isDataUsed = compModel.hasFieldScopeValues("sendIntent", "data", "scheme")
-                || compModel.hasFieldScopeValues("recvIntent", "data", "scheme")
-                || compModel.hasFieldScopeValues("sendIntent", "data", "host")
-                || compModel.hasFieldScopeValues("recvIntent", "data", "host")
-                || compModel.hasFieldScopeValues("sendIntent", "data", "port")
-                || compModel.hasFieldScopeValues("recvIntent", "data", "port")
-                || compModel.hasFieldScopeValues("sendIntent", "data", "authority")
-                || compModel.hasFieldScopeValues("recvIntent", "data", "authority")
-                || compModel.hasFieldScopeValues("sendIntent", "data", "path")
-                || compModel.hasFieldScopeValues("recvIntent", "data", "path");
+        boolean isDataUsed = MISTUtils.isDataUsed(compModel);
 
         JSONArray schemeArr = new JSONArray();
         if (isDataUsed) {
