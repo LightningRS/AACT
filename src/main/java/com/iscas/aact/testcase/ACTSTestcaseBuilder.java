@@ -93,7 +93,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             ArrayList<Parameter> extraParamsWithExtra = new ArrayList<>(extraParams);
             extraParamsWithExtra.add(sut.getParam("extra"));
             // Build forward constraint
-            Constraint extraConForward = new Constraint("extra = \"" + Constants.VAL_EMPTY
+            Constraint extraConForward = new Constraint("extra = \"" + Constants.VAL_NULL
+                    + "\" || extra = \"" + Constants.VAL_EMPTY
                     + "\" => " + String.join(" && ", extraConStrNull), extraParamsWithExtra);
             sut.addConstraint(extraConForward);
             // Build reverse constraint
@@ -468,7 +469,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                         // 需要进行名称转换 (base32 编码)
                         if (val.contains("-")) {
                             String[] sp = val.split("-", 2);
-                            String type = sp[0].trim(), name = sp[1].trim();
+                            String name = sp[1].trim();
 
                             // 将 name 名称部分进行 base32 编码 并加上前后下划线
                             // extra 字段在组合测试模型中的名称格式为 extra_{parentId}_{id}_{nameInBase32}_{typeInBase32}
