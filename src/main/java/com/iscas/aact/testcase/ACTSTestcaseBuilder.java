@@ -169,9 +169,13 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         sut.addConstraint(dataConReverse1);
         sut.addConstraint(dataConReverse2);
 
+        int defaultS = Config.getInstance().getDefaultStrength();
+
         // Relation between basic fields
         Relation rAllFields = new Relation();
-        if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
+        if (defaultS > 0) {
+            rAllFields.setStrength(defaultS);
+        } else if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
             log.info("MIST result is mustIA, set basic fields strength to 1");
             rAllFields.setStrength(1);
         } else {
@@ -186,13 +190,15 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
 
         // Relation between flattened categories
         if (catParams.size() > 1) {
-            Relation rCategory;
-            if (compModel.hasFieldScopeValues("sendIntent", "category")
+            Relation rCategory = new Relation();
+            if (defaultS > 0) {
+                rCategory.setStrength(defaultS);
+            } else if (compModel.hasFieldScopeValues("sendIntent", "category")
                     || compModel.hasFieldScopeValues("recvIntent", "category")) {
                 log.debug("Category has been used in send/recv scope, set strength to 2");
-                rCategory = new Relation(2);
+                rCategory.setStrength(2);
             } else {
-                rCategory = new Relation(1);
+                rCategory.setStrength(1);
             }
             catParams.forEach(rCategory::addParam);
             addRelation(rCategory);
@@ -200,27 +206,28 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
 
         // Relation between extra
         if (extraParams.size() > 1) {
-            Relation rExtra = new Relation(2);
+            Relation rExtra = new Relation();
+            rExtra.setStrength(defaultS > 0 ? defaultS : 2);
             extraParams.forEach(rExtra::addParam);
             addRelation(rExtra);
         }
 
         // Relation between data
-        Relation rData = new Relation(2);
+        Relation rData = new Relation();
+        rData.setStrength(defaultS > 0 ? defaultS : 2);
         rData.addParam(sut.getParam("scheme"));
         rData.addParam(sut.getParam("authority"));
         rData.addParam(sut.getParam("path"));
         addRelation(rData);
 
         // Optimize strength by param summary
-        updateRelationByParamSummary();
+        updateRelationByParamSummary(defaultS);
 
         // Strategy for default relation:
         // if useAction and useExtra => t = 2
         // else if numOfPath > threshold (2) => t = 2
         // else t = 1 (mustIA, numOfPath = 0, etc.)
-        int defaultS = Config.getInstance().getDefaultStrength();
-        if (defaultS == 0) {
+        if (defaultS <= 0) {
             boolean hasMISTResult = Config.getInstance().getMISTResult() != null;
             boolean hasParamSummary = getCompParamSummaryJson() != null;
             boolean isUseActAndExt = isUseActionAndExtra();
@@ -416,7 +423,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         return false;
     }
 
-    private void updateRelationByParamSummary() {
+    private void updateRelationByParamSummary(int defaultS) {
         // 获取当前组件的 paramSummary 列表
         JSONArray compParamSummary = getCompParamSummaryJson();
         if (compParamSummary == null) {
@@ -456,7 +463,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                         // 需要进行名称转换 (base32 编码)
                         if (val.contains("-")) {
                             String[] sp = val.split("-", 2);
-                            String type = sp[0].trim(), name = sp[1].trim();
+                            // String type = sp[0].trim();
+                            String name = sp[1].trim();
 
                             // 将 name 名称部分进行 base32 编码 并加上前后下划线
                             // extra 字段在组合测试模型中的名称格式为 extra_{parentId}_{id}_{nameInBase32}_{typeInBase32}
@@ -529,7 +537,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 Map<String, Parameter> paramGroup = paramGroups.get(i);
                 log.info("Add relation by param summary: ({})",
                         String.join(", ", paramGroup.keySet().stream().sorted().toList()));
-                Relation r = new Relation(3);
+                Relation r = new Relation();
+                r.setStrength(defaultS > 0 ? defaultS : 3);
                 paramGroup.values().forEach(r::addParam);
                 addRelation(r);
             }
