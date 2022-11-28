@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.PrintWriter;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -462,6 +463,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             }
 
             Map<String, Parameter> paramMap = new HashMap<>(pathParams.size());
+            AtomicBoolean hasExtra = new AtomicBoolean(false);
 
             // 将 JSONArray 转换为 List<String>，遍历参数列表
             pathParams.toJavaList(String.class).stream().filter(Predicate.not(String::isEmpty))
@@ -479,6 +481,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                         // 对于 extra 字段，判断标准为是否包含减号“-”
                         // 需要进行名称转换 (base32 编码)
                         if (val.contains("-")) {
+                            hasExtra.set(true);
                             String[] sp = val.split("-", 2);
                             String name = sp[1].trim();
 
@@ -512,6 +515,10 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                             paramMap.put(val, target);
                         }
                     });
+            if (hasExtra.get()) {
+                log.info("Extra detected in param summary");
+                paramMap.put("extra", sut.getParam("extra"));
+            }
             paramGroups.add(paramMap);
         }
 
