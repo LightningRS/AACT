@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONObject;
 import com.iscas.aact.Constants;
 import com.iscas.aact.utils.CompModel;
 import com.iscas.aact.utils.Config;
+import com.iscas.aact.utils.MISTUtils;
 import com.opencsv.CSVWriter;
 import edu.uta.cse.fireeye.common.*;
 import edu.uta.cse.fireeye.service.engine.IpoEngine;
@@ -178,12 +179,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         if (defaultS != 0) {
             rAllFields.setStrength(defaultS);
         } else {
-            if (Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
-                log.info("MIST result is mustIA, set basic fields strength to 1");
-                rAllFields.setStrength(1);
-            } else {
-                rAllFields.setStrength(2);
-            }
+            rAllFields.setStrength(1);
         }
         rAllFields.addParam(sut.getParam("action"));
         rAllFields.addParam(sut.getParam("category"));
@@ -192,46 +188,10 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
         rAllFields.addParam(sut.getParam("type"));
         addRelation(rAllFields);
 
-        // Relation between flattened categories
-        if (catParams.size() > 1) {
-            Relation rCategory = new Relation();
-            if (defaultS != 0) {
-                rCategory.setStrength(defaultS);
-            } else {
-                if (compModel.hasFieldScopeValues("sendIntent", "category")
-                        || compModel.hasFieldScopeValues("recvIntent", "category")) {
-                    log.debug("Category has been used in send/recv scope, set strength to 2");
-                    rCategory.setStrength(2);
-                } else {
-                    rCategory.setStrength(1);
-                }
-            }
-            catParams.forEach(rCategory::addParam);
-            addRelation(rCategory);
-        }
-
-        // Relation between extra
-        if (extraParams.size() > 1) {
-            Relation rExtra = new Relation();
-            rExtra.setStrength(defaultS == 0 ? 2 : defaultS);
-            extraParams.forEach(rExtra::addParam);
-            addRelation(rExtra);
-        }
-
-        // Relation between data
-        Relation rData = new Relation();
-        rData.setStrength(defaultS == 0 ? 2 : defaultS);
-        rData.addParam(sut.getParam("scheme"));
-        rData.addParam(sut.getParam("authority"));
-        rData.addParam(sut.getParam("path"));
-        addRelation(rData);
-
-        // Optimize strength by param summary
-        updateRelationByParamSummary(defaultS);
-
+        int uniqueS = 3;
         // Strategy for default relation:
-        // if useAction and useExtra => t = 2
-        // else if numOfPath > threshold (2) => t = 2
+        // if useAction and useExtra => t = 3
+        // else if numOfPath > threshold (2) => t = 3
         // else t = 1 (mustIA, numOfPath = 0, etc.)
         if (defaultS == 0) {
             boolean hasMISTResult = Config.getInstance().getMISTResult() != null;
@@ -240,10 +200,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             int numOfPath = getNumOfPath();
             if (isUseActAndExt) {
                 log.info("Default Relation: Use action and extra");
-                sut.addDefaultRelation(2);
             } else if (numOfPath > Constants.NUM_OF_PATH_THRESHOLD) {
                 log.info("Default Relation: numOfPath > THRESHOLD");
-                sut.addDefaultRelation(2);
             } else {
                 if (hasMISTResult && Constants.MIST_TYPE_MUST_IA.equals(compModel.getMistType())) {
                     log.info("Default Relation: MIST result is mustIA");
@@ -251,8 +209,61 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 if (hasParamSummary && numOfPath == 0) {
                     log.info("Default Relation: numOfPath = 0");
                 }
-                sut.addDefaultRelation(1);
+                uniqueS = 1;
             }
+        }
+
+        // Relation between flattened categories
+        if (catParams.size() > 1) {
+            Relation rCategory = new Relation();
+            if (defaultS > 0) {
+                rCategory.setStrength(defaultS);
+            } else if (compModel.hasFieldScopeValues("sendIntent", "category")
+                    || compModel.hasFieldScopeValues("recvIntent", "category")) {
+                log.debug("Category has been used in send/recv scope, set strength to uniqueS");
+                rCategory.setStrength(uniqueS);
+            } else {
+                rCategory.setStrength(1);
+            }
+            catParams.forEach(rCategory::addParam);
+            addRelation(rCategory);
+        }
+
+        // Relation between extra
+        // Dynamically set by updateRelationByParamSummary, ignored
+//        if (extraParams.size() > 1) {
+//            Relation rExtra = new Relation();
+//            rExtra.setStrength(defaultS > 0 ? defaultS : 2);
+//            extraParams.forEach(rExtra::addParam);
+//            addRelation(rExtra);
+//        }
+
+        // Relation between data
+        Relation rData = new Relation();
+        rData.addParam(sut.getParam("scheme"));
+        rData.addParam(sut.getParam("authority"));
+        rData.addParam(sut.getParam("path"));
+        if (defaultS > 0) {
+            rData.setStrength(defaultS);
+        } else if (MISTUtils.isDataUsed(compModel)) {
+            log.debug("Data has been used in send/recv scope, set strength to uniqueS");
+            rData.setStrength(uniqueS);
+        } else {
+            rData.setStrength(1);
+        }
+        addRelation(rData);
+
+        if (defaultS == 0) {
+            // Optimize strength by param summary
+            updateRelationByParamSummary(uniqueS);
+        } else {
+            // Optimize strength by param summary
+            updateRelationByParamSummary(defaultS);
+        }
+
+        // Default Relation
+        if (defaultS == 0) {
+            sut.addDefaultRelation(1);
         } else {
             log.info("Default Relation: Fixed {}", defaultS);
             sut.addDefaultRelation(defaultS);
@@ -445,8 +456,8 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
             // 获取当前路径下的所有参数名称
             JSONArray pathParams = ((JSONObject) pathSummaryObj).getJSONArray("params");
 
-            // 若没有参数或参数个数少于 3 个（因强度欲设为 3）则忽略
-            if (pathParams == null || pathParams.size() < 3) {
+            // 若没有参数或参数个数少于 2 个则忽略
+            if (pathParams == null || pathParams.size() < 2) {
                 continue;
             }
 
@@ -543,7 +554,7 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 log.info("Add relation by param summary: ({})",
                         String.join(", ", paramGroup.keySet().stream().sorted().toList()));
                 Relation r = new Relation();
-                r.setStrength(defaultS == 0 ? 3 : defaultS);
+                r.setStrength(defaultS);
                 paramGroup.values().forEach(r::addParam);
                 addRelation(r);
             }
