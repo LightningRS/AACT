@@ -78,6 +78,7 @@ public class FlattenerExtra extends BaseFlattener {
         } else {
             fValues.add(Constants.VAL_NULL);
             fValues.add(Constants.VAL_EMPTY);
+            fValues.add(Constants.VAL_NOT_EMPTY);
         }
     }
 
