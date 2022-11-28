@@ -20,6 +20,10 @@ public class Constants {
     public static final String VAL_EMPTY = "$#EMPTY#$";
     public static final String VAL_NOT_EMPTY = "$#NOTEMPTY#$";
 
+    public static final String VAL_NOT_EMPTY_ARR_NULL_ELEM = "$#NOTEMPTY_NULL#$";
+    public static final String VAL_NOT_EMPTY_ARR_EMPTY_ELEM = "$#NOTEMPTY_EMPTY#$";
+    public static final String VAL_NOT_EMPTY_ARR_NOT_EMPTY_ELEM = "$#NOTEMPTY_NOTEMPTY#$";
+
     public static final long TIMEOUT_START_MS = 5000;
     public static final long TIME_DISPLAY_REQUIRE_MS = 1000;
     public static final long COMP_CHECK_INTERVAL = 200;

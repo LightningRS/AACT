@@ -78,7 +78,14 @@ public class FlattenerExtra extends BaseFlattener {
         } else {
             fValues.add(Constants.VAL_NULL);
             fValues.add(Constants.VAL_EMPTY);
-            fValues.add(Constants.VAL_NOT_EMPTY);
+
+            if (extraType.endsWith("ArrayList")) {
+                fValues.add(Constants.VAL_NOT_EMPTY_ARR_NULL_ELEM);
+                fValues.add(Constants.VAL_NOT_EMPTY_ARR_EMPTY_ELEM);
+                fValues.add(Constants.VAL_NOT_EMPTY_ARR_NOT_EMPTY_ELEM);
+            } else {
+                fValues.add(Constants.VAL_NOT_EMPTY);
+            }
         }
     }
 
