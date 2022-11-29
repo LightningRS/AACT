@@ -162,15 +162,22 @@ public class ACTSTestcaseBuilder extends BaseTestcaseBuilder {
                 Constants.VAL_EMPTY + "\" => " + "scheme = \"" + Constants.VAL_EMPTY + "\" && authority = \"" +
                 Constants.VAL_EMPTY + "\" && path = \"" + Constants.VAL_EMPTY + "\"", dataParams);
         sut.addConstraint(dataConForward);
-        Constraint dataConReverse1 = new Constraint("scheme != \"" + Constants.VAL_EMPTY + "\" && " +
-                "(authority != \"" + Constants.VAL_EMPTY + "\" || path != \"" + Constants.VAL_EMPTY + "\") => " +
-                "data = \"" + Constants.VAL_NOT_EMPTY + "\"", dataParams);
-        Constraint dataConReverse2 = new Constraint(
-                "scheme = \"" + Constants.VAL_EMPTY + "\" => data = \"" + Constants.VAL_EMPTY + "\"",
-                new ArrayList<>(Arrays.asList(sut.getParam("data"), sut.getParam("scheme")))
-        );
-        sut.addConstraint(dataConReverse1);
-        sut.addConstraint(dataConReverse2);
+
+        Constraint dataConForward2 = new Constraint("data = \"" + Constants.VAL_NOT_EMPTY + "\" => ( " +
+                "scheme != \"" + Constants.VAL_NULL + "\" && scheme != \"" + Constants.VAL_EMPTY + "\" ) || ( " +
+                "authority != \"" + Constants.VAL_NULL + "\" && authority != \"" + Constants.VAL_EMPTY + "\" ) || ( " +
+                "path != \"" + Constants.VAL_NULL + "\" && path != \"" + Constants.VAL_EMPTY + "\" )", dataParams);
+        sut.addConstraint(dataConForward2);
+
+//        Constraint dataConReverse1 = new Constraint("scheme != \"" + Constants.VAL_EMPTY + "\" && " +
+//                "(authority != \"" + Constants.VAL_EMPTY + "\" || path != \"" + Constants.VAL_EMPTY + "\") => " +
+//                "data = \"" + Constants.VAL_NOT_EMPTY + "\"", dataParams);
+//        Constraint dataConReverse2 = new Constraint(
+//                "scheme = \"" + Constants.VAL_EMPTY + "\" => data = \"" + Constants.VAL_EMPTY + "\"",
+//                new ArrayList<>(Arrays.asList(sut.getParam("data"), sut.getParam("scheme")))
+//        );
+//        sut.addConstraint(dataConReverse1);
+//        sut.addConstraint(dataConReverse2);
 
         // Default strength
         int defaultS = Config.getInstance().getDefaultStrength();
