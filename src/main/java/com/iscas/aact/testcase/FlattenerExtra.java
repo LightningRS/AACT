@@ -136,6 +136,13 @@ public class FlattenerExtra extends BaseFlattener {
         int thisNodeId = nodeId;
         String extraName = extraObj.getString("name");
         String extraType = extraObj.getString("type").replaceAll("java\\.lang\\.", "");
+        if ("bundle".equals(extraType)) {
+            extraType = "Bundle";
+        } else if (extraType.endsWith("[]")) {
+            extraType = extraType.replace("[]", "Array");
+        } else if ("Object".equals(extraType)) {
+            extraType = "Parcelable";
+        }
         String extraNodeName = "extra_" + parentId + "_" + nodeId + "_" + encodeExtraNameAndType(extraName, extraType);
         Set<String> fValues = new HashSet<>();
         JSONArray bodyObj = extraObj.getJSONArray("body");
