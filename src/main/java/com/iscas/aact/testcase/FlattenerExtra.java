@@ -76,12 +76,14 @@ public class FlattenerExtra extends BaseFlattener {
             fValues.add("0");
             fValues.add("1");
         } else {
+            boolean isParcelSerial = extraType.contains("Parcelable") || extraType.contains("Serializable");
             fValues.add(Constants.VAL_NULL);
-            fValues.add(Constants.VAL_EMPTY);
+
+            if (!isParcelSerial) fValues.add(Constants.VAL_EMPTY);
 
             if (extraType.endsWith("ArrayList")) {
                 fValues.add(Constants.VAL_NOT_EMPTY_ARR_NULL_ELEM);
-                fValues.add(Constants.VAL_NOT_EMPTY_ARR_EMPTY_ELEM);
+                if (!isParcelSerial) fValues.add(Constants.VAL_NOT_EMPTY_ARR_EMPTY_ELEM);
                 fValues.add(Constants.VAL_NOT_EMPTY_ARR_NOT_EMPTY_ELEM);
             } else {
                 fValues.add(Constants.VAL_NOT_EMPTY);
