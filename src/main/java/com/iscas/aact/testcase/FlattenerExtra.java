@@ -153,6 +153,9 @@ public class FlattenerExtra extends BaseFlattener {
             JSONArray values = extraObj.getJSONArray("values");
             if (values != null) {
                 for (String value : values.toJavaList(String.class)) {
+                    if ("long".equalsIgnoreCase(extraType) && value.endsWith("L")) {
+                        value = value.substring(0, value.length() - 1);
+                    }
                     if ("boolean".equalsIgnoreCase(extraType)) {
                         fValues.add("1".equals(value) ? "true" : "false");
                     } else if (value.startsWith("new ")) {
