@@ -10,7 +10,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
-@LogcatHandler(name = "ActivityDisplayedHandler", regex = "I/ActivityManager: Displayed", priority = 1)
+@LogcatHandler(name = "ActivityDisplayedHandler", regex = "I ActivityManager: Displayed", priority = 1)
 public class ActivityDisplayedHandler implements ILogcatHandler {
     private static final Pattern PATTERN = Pattern.compile("Displayed (?<compName>[^:]+): (?<startDelay>.*)");
 
