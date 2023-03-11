@@ -55,7 +55,7 @@
         <dependency>
             <groupId>com.opencsv</groupId>
             <artifactId>opencsv</artifactId>
-            <version>5.6</version>
+            <version>5.7.1</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.reflections/reflections -->
         <dependency>
@@ -88,7 +88,7 @@
             <scope>compile</scope>
         </dependency>
         <dependency>
-            <groupId>acts</groupId>
+            <groupId>edu.uta.cse</groupId>
             <artifactId>acts</artifactId>
             <version>3.2.0</version>
             <exclusions>
@@ -101,6 +101,29 @@
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>install-acts</id>
+                        <phase>clean</phase>
+                        <configuration>
+                            <file>${project.basedir}/lib/acts_3.2.jar</file>
+                            <repositoryLayout>default</repositoryLayout>
+                            <groupId>edu.uta.cse</groupId>
+                            <artifactId>acts</artifactId>
+                            <version>3.2.0</version>
+                            <packaging>jar</packaging>
+                            <generatePom>true</generatePom>
+                        </configuration>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok-maven-plugin</artifactId>
